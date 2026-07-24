@@ -26,6 +26,7 @@ COPY oc-filesystem-repository-connector/pom.xml oc-filesystem-repository-connect
 COPY oc-alfresco-repository-connector/pom.xml oc-alfresco-repository-connector/
 COPY oc-iceberg-repository-connector/pom.xml oc-iceberg-repository-connector/
 COPY oc-flowable-repository-connector/pom.xml oc-flowable-repository-connector/
+COPY oc-camunda-repository-connector/pom.xml oc-camunda-repository-connector/
 COPY oc-vector-output-connector/pom.xml oc-vector-output-connector/
 COPY oc-milvus-output-connector/pom.xml oc-milvus-output-connector/
 COPY oc-opensearch2-output-connector/pom.xml oc-opensearch2-output-connector/
@@ -35,7 +36,7 @@ COPY oc-runtime/pom.xml oc-runtime/
 COPY oc-embedding-service/pom.xml oc-embedding-service/
 
 # Download maven dependencies first (saves time on rebuilds if code changes but dependencies do not)
-RUN mvn dependency:go-offline -B -DexcludeArtifactIds=oc-core,oc-observability,oc-filesystem-repository-connector,oc-alfresco-repository-connector,oc-iceberg-repository-connector,oc-flowable-repository-connector,oc-vector-output-connector,oc-milvus-output-connector,oc-admin-ui,oc-runtime,oc-embedding-service,oc-opensearch2-output-connector,oc-opensearch3-output-connector
+RUN mvn dependency:go-offline -B -DexcludeArtifactIds=oc-core,oc-observability,oc-filesystem-repository-connector,oc-alfresco-repository-connector,oc-iceberg-repository-connector,oc-flowable-repository-connector,oc-camunda-repository-connector,oc-vector-output-connector,oc-milvus-output-connector,oc-admin-ui,oc-runtime,oc-embedding-service,oc-opensearch2-output-connector,oc-opensearch3-output-connector
 
 # Copy all source files
 COPY oc-core/src/ /app/oc-core/src/
@@ -44,6 +45,7 @@ COPY oc-filesystem-repository-connector/src/ /app/oc-filesystem-repository-conne
 COPY oc-alfresco-repository-connector/src/ /app/oc-alfresco-repository-connector/src/
 COPY oc-iceberg-repository-connector/src/ /app/oc-iceberg-repository-connector/src/
 COPY oc-flowable-repository-connector/src/ /app/oc-flowable-repository-connector/src/
+COPY oc-camunda-repository-connector/src/ /app/oc-camunda-repository-connector/src/
 COPY oc-vector-output-connector/src/ /app/oc-vector-output-connector/src/
 COPY oc-milvus-output-connector/src/ /app/oc-milvus-output-connector/src/
 COPY oc-opensearch2-output-connector/src/ /app/oc-opensearch2-output-connector/src/

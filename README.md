@@ -14,6 +14,7 @@
 [![Apache Tika](https://img.shields.io/badge/Apache_Tika-3.x-007396.svg?style=flat&logo=apache&logoColor=white)](https://tika.apache.org/)
 [![Alfresco](https://img.shields.io/badge/Alfresco_Content_Services-Supported-0090DF.svg?style=flat&logo=alfresco&logoColor=white)](https://www.alfresco.com/)
 [![Flowable](https://img.shields.io/badge/Flowable_BPMN-Supported-007ACC.svg?style=flat&logo=flowable&logoColor=white)](https://www.flowable.com/)
+[![Camunda](https://img.shields.io/badge/Camunda_BPM-Supported-E10076.svg?style=flat&logo=camunda&logoColor=white)](https://camunda.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17+-blue.svg?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Milvus](https://img.shields.io/badge/Milvus-2.4.5-00A1EA.svg?style=flat&logo=milvus&logoColor=white)](https://milvus.io/)
 [![OpenSearch](https://img.shields.io/badge/OpenSearch-2.x%20%7C%203.x-005EB8.svg?style=flat&logo=opensearch&logoColor=white)](https://opensearch.org/)
@@ -53,6 +54,8 @@ graph TD
         Runtime_Node([OpenCrawling Ingestion Runtime])
         Core[Core Ingestion Engine - oc-core]
         FS_Conn[Filesystem Repository - oc-filesystem-repository-connector]
+        Flowable_Conn[Flowable Repository - oc-flowable-repository-connector]
+        Camunda_Conn[Camunda Repository - oc-camunda-repository-connector]
         
         Ing_Cons[Ingestion Consumer - IngestionConsumer]
         Tika[Apache Tika Text Extractor]
