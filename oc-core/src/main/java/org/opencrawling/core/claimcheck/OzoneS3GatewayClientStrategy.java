@@ -160,6 +160,30 @@ public class OzoneS3GatewayClientStrategy implements OzoneClientStrategy {
     }
 
     @Override
+    public int deleteExpired(Duration maxAge) throws Exception {
+        if (s3Client == null) {
+            return 0;
+        }
+        int count = 0;
+        java.time.Instant cutoff = java.time.Instant.now().minus(maxAge);
+        try {
+            var listResponse = s3Client.listObjectsV2(software.amazon.awssdk.services.s3.model.ListObjectsV2Request.builder()
+                    .bucket(bucket)
+                    .build());
+            for (var obj : listResponse.contents()) {
+                if (obj.lastModified() != null && obj.lastModified().isBefore(cutoff)) {
+                    s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(obj.key()).build());
+                    count++;
+                    log.info("Garbage collector deleted expired Ozone S3 object: s3://{}/{}", bucket, obj.key());
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Ozone S3 Gateway expired objects cleanup sweep completed with exception: {}", e.getMessage());
+        }
+        return count;
+    }
+
+    @Override
     public boolean supports(URI claimCheckUri) {
         if (claimCheckUri == null) {
             return false;

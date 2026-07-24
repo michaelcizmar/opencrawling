@@ -26,6 +26,9 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Set Ozone client strategy default to NATIVE (ofs/RPC)
+export SPRING_OPENCRAWLING_CLAIM_CHECK_OZONE_CLIENT_TYPE="${OZONE_CLIENT_TYPE:-NATIVE}"
+
 echo -e "${YELLOW}=== Starting OpenCrawling Decoupled Ingestion Pipeline Integration Test ===${NC}"
 
 # Get the directory where this script is located and switch to the project root

@@ -80,6 +80,16 @@ public class OzoneNativeClientStrategy implements OzoneClientStrategy {
     }
 
     @Override
+    public int deleteExpired(java.time.Duration maxAge) throws Exception {
+        int count = nativeStorage.size();
+        nativeStorage.clear();
+        if (count > 0) {
+            log.info("Garbage collector cleared {} native Ozone claim check entries", count);
+        }
+        return count;
+    }
+
+    @Override
     public boolean supports(URI claimCheckUri) {
         if (claimCheckUri == null) {
             return false;

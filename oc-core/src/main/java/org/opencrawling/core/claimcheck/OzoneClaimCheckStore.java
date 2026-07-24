@@ -54,10 +54,11 @@ public class OzoneClaimCheckStore implements ClaimCheckStore {
         OzoneS3GatewayClientStrategy s3Strategy = new OzoneS3GatewayClientStrategy(s3Client, bucket, autoCreateBucket);
         ClaimCheckProperties.Ozone defaultProps = new ClaimCheckProperties.Ozone();
         defaultProps.setBucket(bucket);
+        defaultProps.setClientType("NATIVE");
         OzoneNativeClientStrategy nativeStrategy = new OzoneNativeClientStrategy(defaultProps);
 
-        this.primaryStrategy = s3Strategy;
-        this.strategies = List.of(s3Strategy, nativeStrategy);
+        this.primaryStrategy = nativeStrategy;
+        this.strategies = List.of(nativeStrategy, s3Strategy);
     }
 
     public OzoneClaimCheckStore(OzoneClientStrategy primaryStrategy, List<OzoneClientStrategy> strategies) {
@@ -89,6 +90,19 @@ public class OzoneClaimCheckStore implements ClaimCheckStore {
             }
         }
         primaryStrategy.delete(claimCheckUri);
+    }
+
+    @Override
+    public int deleteExpired(java.time.Duration maxAge) throws Exception {
+        int total = 0;
+        for (OzoneClientStrategy strategy : strategies) {
+            try {
+                total += strategy.deleteExpired(maxAge);
+            } catch (Exception e) {
+                log.warn("Failed deleteExpired sweep for strategy {}: {}", strategy.getClass().getSimpleName(), e.getMessage());
+            }
+        }
+        return total;
     }
 
     @Override

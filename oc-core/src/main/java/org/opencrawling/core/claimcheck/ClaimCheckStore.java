@@ -61,6 +61,17 @@ public interface ClaimCheckStore {
     void delete(URI claimCheckUri) throws Exception;
 
     /**
+     * Delete expired claim check objects older than given maxAge.
+     *
+     * @param maxAge Maximum age duration for stored claim check objects
+     * @return Number of expired objects deleted
+     * @throws Exception if deletion sweep fails
+     */
+    default int deleteExpired(java.time.Duration maxAge) throws Exception {
+        return 0;
+    }
+
+    /**
      * Check if given URI is supported by this store implementation.
      *
      * @param claimCheckUri URI to check
