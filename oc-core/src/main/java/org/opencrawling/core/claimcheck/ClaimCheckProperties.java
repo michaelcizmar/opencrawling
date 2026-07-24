@@ -49,7 +49,10 @@ public class ClaimCheckProperties {
     }
 
     public static class Ozone {
+        private String clientType = "S3"; // Options: "S3" (s3g/HTTP) or "NATIVE" (ofs/RPC)
         private String s3Endpoint = "http://localhost:9878";
+        private String omHost = "localhost";
+        private int omPort = 9862;
         private String volume = "s3v";
         private String bucket = "claims";
         private String accessKey = "ozone";
@@ -57,6 +60,30 @@ public class ClaimCheckProperties {
         private boolean pathStyleAccess = true;
         private String region = "us-east-1";
         private boolean autoCreateBucket = true;
+
+        public String getClientType() {
+            return clientType;
+        }
+
+        public void setClientType(String clientType) {
+            this.clientType = clientType;
+        }
+
+        public String getOmHost() {
+            return omHost;
+        }
+
+        public void setOmHost(String omHost) {
+            this.omHost = omHost;
+        }
+
+        public int getOmPort() {
+            return omPort;
+        }
+
+        public void setOmPort(int omPort) {
+            this.omPort = omPort;
+        }
 
         public String getS3Endpoint() {
             return s3Endpoint;

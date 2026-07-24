@@ -24,7 +24,9 @@ import {
   Loader2,
   RefreshCw,
   HelpCircle,
-  Database
+  Database,
+  HardDrive,
+  Zap
 } from 'lucide-react'
 import { statusApi } from '../lib/api'
 
@@ -36,6 +38,13 @@ interface SystemSettings {
   chunkerType: string
   chunkSize: number
   chunkOverlap: number
+  claimCheckStore: string
+  ozoneClientType: 'S3' | 'NATIVE'
+  ozoneS3Endpoint: string
+  ozoneOmHost: string
+  ozoneOmPort: number
+  ozoneVolume: string
+  ozoneBucket: string
 }
 
 export default function Settings() {
@@ -46,7 +55,14 @@ export default function Settings() {
     vectorDimensions: 1024,
     chunkerType: 'TokenTextSplitter',
     chunkSize: 800,
-    chunkOverlap: 100
+    chunkOverlap: 100,
+    claimCheckStore: 'ozone',
+    ozoneClientType: 'NATIVE',
+    ozoneS3Endpoint: 'http://127.0.0.1:9878',
+    ozoneOmHost: '127.0.0.1',
+    ozoneOmPort: 9862,
+    ozoneVolume: 's3v',
+    ozoneBucket: 'claims'
   })
 
   const [isLoading, setIsLoading] = useState(true)
@@ -371,6 +387,173 @@ export default function Settings() {
                 <span>500</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Card 3: Apache Ozone Storage & Client Selection */}
+        <div className="card-container space-y-6">
+          <div className="flex items-center gap-3 border-b border-border pb-4">
+            <HardDrive className="w-5 h-5 text-amber-400" />
+            <div>
+              <h3 className="text-lg font-bold text-foreground">3. Apache Ozone & Claim-Check Storage</h3>
+              <p className="text-xs text-muted-foreground">Configure binary document offloading and client protocol strategy (S3 Gateway vs Native RPC).</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Storage Provider Selection */}
+            <div>
+              <label className="text-sm font-semibold mb-2 block">Claim Check Store Provider</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                  onClick={() => setSettings({ ...settings, claimCheckStore: 'ozone' })}
+                  className={`p-4 border rounded-lg flex flex-col justify-between h-28 cursor-pointer transition-all ${
+                    settings.claimCheckStore === 'ozone' 
+                      ? 'border-amber-500/80 bg-amber-500/10 ring-1 ring-amber-500/30' 
+                      : 'border-border bg-slate-900/30 hover:border-border-50 opacity-70'
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-sm text-foreground flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-400" />
+                      Apache Ozone Distributed Storage
+                    </span>
+                    <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-semibold uppercase">Recommended</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Scalable distributed object store. Offloads heavy raw binary streams from Kafka queues.
+                  </p>
+                </div>
+
+                <div 
+                  onClick={() => setSettings({ ...settings, claimCheckStore: 'local' })}
+                  className={`p-4 border rounded-lg flex flex-col justify-between h-28 cursor-pointer transition-all ${
+                    settings.claimCheckStore === 'local' 
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20' 
+                      : 'border-border bg-slate-900/30 hover:border-border-50 opacity-70'
+                  }`}
+                >
+                  <div>
+                    <span className="font-bold text-sm text-foreground">Local Shared Disk</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Stores temporary payload files on local or shared network directory (`/data/claims`).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Ozone Client Strategy Configuration */}
+            {settings.claimCheckStore === 'ozone' && (
+              <div className="space-y-6 pt-4 border-t border-border/40 animate-in fade-in duration-200">
+                <div>
+                  <label className="text-sm font-semibold mb-2 block">Ozone Client Protocol Strategy</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Native RPC Strategy */}
+                    <div 
+                      onClick={() => setSettings({ ...settings, ozoneClientType: 'NATIVE' })}
+                      className={`p-4 border rounded-lg flex flex-col justify-between cursor-pointer transition-all ${
+                        settings.ozoneClientType === 'NATIVE' 
+                          ? 'border-emerald-500/80 bg-emerald-500/10 ring-1 ring-emerald-500/30' 
+                          : 'border-border bg-slate-900/30 hover:border-border-50 opacity-70'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                          <Zap className="w-4 h-4 text-emerald-400" />
+                          Native Ozone Client (ofs / o3fs)
+                        </span>
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono font-bold">RPC High Performance</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Direct gRPC/RPC transport to DataNodes & Ozone Manager (OM). Bypasses HTTP/XML S3 Gateway translation layer for maximum throughput.
+                      </p>
+                    </div>
+
+                    {/* S3 Gateway Strategy */}
+                    <div 
+                      onClick={() => setSettings({ ...settings, ozoneClientType: 'S3' })}
+                      className={`p-4 border rounded-lg flex flex-col justify-between cursor-pointer transition-all ${
+                        settings.ozoneClientType === 'S3' 
+                          ? 'border-cyan-500/80 bg-cyan-500/10 ring-1 ring-cyan-500/30' 
+                          : 'border-border bg-slate-900/30 hover:border-border-50 opacity-70'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                          <Globe className="w-4 h-4 text-cyan-400" />
+                          S3 Gateway Client (s3g)
+                        </span>
+                        <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-mono font-bold">Standard S3</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Standard AWS S3 SDK integration hitting Ozone's S3 Gateway endpoint. Maximum cloud & network versatility.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Strategy Connection Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-950/40 p-4 border border-border/50 rounded-lg">
+                  {settings.ozoneClientType === 'NATIVE' ? (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-muted-foreground">Ozone Manager (OM) Host</label>
+                        <input 
+                          type="text"
+                          value={settings.ozoneOmHost}
+                          onChange={(e) => setSettings({ ...settings, ozoneOmHost: e.target.value })}
+                          placeholder="localhost"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-muted-foreground">Ozone Manager (OM) RPC Port</label>
+                        <input 
+                          type="number"
+                          value={settings.ozoneOmPort}
+                          onChange={(e) => setSettings({ ...settings, ozoneOmPort: parseInt(e.target.value) || 9862 })}
+                          placeholder="9862"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground font-mono"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-xs font-semibold text-muted-foreground">Ozone S3 Gateway Endpoint URL</label>
+                      <input 
+                        type="url"
+                        value={settings.ozoneS3Endpoint}
+                        onChange={(e) => setSettings({ ...settings, ozoneS3Endpoint: e.target.value })}
+                        placeholder="http://localhost:9878"
+                        className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground font-mono"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-muted-foreground">Target Volume</label>
+                    <input 
+                      type="text"
+                      value={settings.ozoneVolume}
+                      onChange={(e) => setSettings({ ...settings, ozoneVolume: e.target.value })}
+                      placeholder="s3v"
+                      className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-muted-foreground">Target Bucket</label>
+                    <input 
+                      type="text"
+                      value={settings.ozoneBucket}
+                      onChange={(e) => setSettings({ ...settings, ozoneBucket: e.target.value })}
+                      placeholder="claims"
+                      className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
