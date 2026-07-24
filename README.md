@@ -32,6 +32,12 @@
 
 ---
 
+## 🎬 Admin UI Screencast Walkthrough
+
+![Admin UI Screencast Walkthrough](images/screenshots/admin-ui-walkthrough.gif)
+
+---
+
 ## Architecture Diagram
 
 The diagram below shows the high-level architecture of OpenCrawling, highlighting the newly decoupled, stateless embedding microservice and transformation connectors:
