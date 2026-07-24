@@ -445,9 +445,14 @@ OpenCrawling supports offloading raw payload streams to **Apache Ozone** via Spr
 ```yaml
 opencrawling:
   claim-check:
-    store: ozone # Options: ozone, local
+    store: ozone                      # Options: ozone, local
+    cleanup-on-consume: true         # Immediate explicit deletion post-ACK
+    lifecycle:
+      enable-background-gc: true      # Background runner for orphaned payloads
+      ttl-hours: 24                   # Retention window before GC purging
+      gc-cron: "0 0 * * * *"          # Hourly GC cron schedule
     ozone:
-      client-type: NATIVE # Options: NATIVE (ofs/o3fs RPC) or S3 (s3g/HTTP)
+      client-type: NATIVE             # Options: NATIVE (ofs/o3fs RPC) or S3 (s3g/HTTP)
       om-host: "localhost"
       om-port: 9862
       volume: "s3v"
@@ -459,6 +464,8 @@ opencrawling:
 
 * **`NATIVE` (Default / High Performance)**: Direct gRPC/RPC communication with DataNodes & Ozone Manager (`ofs://volume/bucket/key`), providing sub-millisecond object offloading.
 * **`S3` (Cloud Versatility)**: Uses the AWS S3 SDK to target Ozone's S3 Gateway (`s3://bucket/key`).
+* **`cleanup-on-consume: true`**: Triggers immediate explicit deletion of offloaded payloads as soon as Kafka chunk extraction receives a post-ingestion ACK.
+* **`lifecycle.enable-background-gc: true`**: Runs a background `ClaimCheckGarbageCollector` on the configured cron schedule (`gc-cron`) to clean up orphaned claim-check objects older than `ttl-hours` caused by node crashes or pipeline failures.
 
 ---
 

@@ -33,8 +33,38 @@ public class ClaimCheckProperties {
      */
     private boolean cleanupOnConsume = true;
 
+    private Lifecycle lifecycle = new Lifecycle();
     private Local local = new Local();
     private Ozone ozone = new Ozone();
+
+    public static class Lifecycle {
+        private boolean enableBackgroundGc = true;
+        private int ttlHours = 24;
+
+        public boolean isEnableBackgroundGc() {
+            return enableBackgroundGc;
+        }
+
+        public void setEnableBackgroundGc(boolean enableBackgroundGc) {
+            this.enableBackgroundGc = enableBackgroundGc;
+        }
+
+        public int getTtlHours() {
+            return ttlHours;
+        }
+
+        public void setTtlHours(int ttlHours) {
+            this.ttlHours = ttlHours;
+        }
+    }
+
+    public Lifecycle getLifecycle() {
+        return lifecycle;
+    }
+
+    public void setLifecycle(Lifecycle lifecycle) {
+        this.lifecycle = lifecycle;
+    }
 
     public static class Local {
         private String dir = "target/claims";

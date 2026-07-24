@@ -53,6 +53,17 @@ public interface OzoneClientStrategy {
     void delete(URI claimCheckUri) throws Exception;
 
     /**
+     * Delete expired objects older than given maxAge.
+     *
+     * @param maxAge Maximum age duration
+     * @return Number of deleted objects
+     * @throws Exception if sweep fails
+     */
+    default int deleteExpired(java.time.Duration maxAge) throws Exception {
+        return 0;
+    }
+
+    /**
      * Check if given URI is supported by this client strategy.
      *
      * @param claimCheckUri URI to check
