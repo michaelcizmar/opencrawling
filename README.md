@@ -299,6 +299,9 @@ The script covers:
 - **OpenTelemetry & Micrometer AIOps**: Automated Root Cause Analysis (RCA) and correlated distributed span telemetry.
 - **Model Context Protocol (MCP)**: System tools exposing vector search and OTel telemetry to LLMs.
 - **Apache Kafka**: Decoupled, event-driven document processing using the **Claim Check Pattern**.
+- **Apache Ozone 2.2.0**: High-performance distributed object store offloading large document payloads with dual client strategy:
+  - **Native Ozone Client (`ofs` / `o3fs`)**: Direct gRPC/RPC transport to DataNodes & Ozone Manager (OM) for maximum throughput.
+  - **S3 Gateway Client (`s3g`)**: Standard AWS S3 SDK integration hitting Ozone's S3 Gateway endpoint for maximum cloud versatility.
 - **pgvector**: High-dimensional vector similarity search in PostgreSQL.
 - **Milvus**: High-performance, distributed vector database for large-scale enterprise vector indexing.
 - **Redis Stack**: Lightweight caching and session management.
@@ -432,6 +435,32 @@ To run the complete decoupled pipeline using the official pre-built release cont
    ```
 
 This pulls the official `ghcr.io/opencrawling/...` images directly, allowing you to spin up the entire architecture (Crawler, Ingestion, Embedding Service, Writer, MCP Server, and Admin UI) instantly.
+
+---
+
+### Option A.4: Apache Ozone Claim Check Strategy Configuration
+
+OpenCrawling supports offloading raw payload streams to **Apache Ozone** via Spring environment properties or the Admin UI:
+
+```yaml
+opencrawling:
+  claim-check:
+    store: ozone # Options: ozone, local
+    ozone:
+      client-type: NATIVE # Options: NATIVE (ofs/o3fs RPC) or S3 (s3g/HTTP)
+      om-host: "localhost"
+      om-port: 9862
+      volume: "s3v"
+      bucket: "claims"
+      s3-endpoint: "http://localhost:9878"
+      access-key: "ozone"
+      secret-key: "ozone-secret"
+```
+
+* **`NATIVE` (Default / High Performance)**: Direct gRPC/RPC communication with DataNodes & Ozone Manager (`ofs://volume/bucket/key`), providing sub-millisecond object offloading.
+* **`S3` (Cloud Versatility)**: Uses the AWS S3 SDK to target Ozone's S3 Gateway (`s3://bucket/key`).
+
+---
 
 ### Option A.4: Decoupled Milvus-Based Deployment (Standalone + etcd + MinIO)
 
