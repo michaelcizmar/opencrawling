@@ -99,6 +99,7 @@
         <module>oc-embedding-service</module>
         <module>oc-opensearch2-output-connector</module>
         <module>oc-opensearch3-output-connector</module>
+        <module>oc-flowable-repository-connector</module>
     </modules>
 
     <properties>

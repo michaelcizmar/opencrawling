@@ -48,7 +48,7 @@ interface TemplateCopilotResponse {
   mockData: Record<string, unknown>
 }
 
-const CONNECTOR_TYPES = ['iceberg', 'filesystem', 'alfresco', 'custom'] as const
+const CONNECTOR_TYPES = ['iceberg', 'filesystem', 'alfresco', 'flowable', 'custom'] as const
 const FIELD_TYPES: FieldType[] = ['STRING', 'DOUBLE', 'FLOAT', 'INTEGER', 'LONG', 'BOOLEAN', 'DATE', 'TIMESTAMP']
 
 const DEFAULT_FIELDS: FieldDto[] = [
@@ -215,6 +215,7 @@ export default function Narrativization() {
                   {ct === 'iceberg' && '🧊 '}
                   {ct === 'filesystem' && '📁 '}
                   {ct === 'alfresco' && '🏢 '}
+                  {ct === 'flowable' && '🔄 '}
                   {ct === 'custom' && '⚙️ '}
                   {ct}
                 </button>
