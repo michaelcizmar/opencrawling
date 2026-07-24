@@ -13,6 +13,7 @@
 [![Apache Ozone](https://img.shields.io/badge/Apache_Ozone-2.2.0-FF6600.svg?style=flat&logo=apache&logoColor=white)](https://ozone.apache.org/)
 [![Apache Tika](https://img.shields.io/badge/Apache_Tika-3.x-007396.svg?style=flat&logo=apache&logoColor=white)](https://tika.apache.org/)
 [![Alfresco](https://img.shields.io/badge/Alfresco_Content_Services-Supported-0090DF.svg?style=flat&logo=alfresco&logoColor=white)](https://www.alfresco.com/)
+[![Flowable](https://img.shields.io/badge/Flowable_BPMN-Supported-007ACC.svg?style=flat&logo=flowable&logoColor=white)](https://www.flowable.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17+-blue.svg?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Milvus](https://img.shields.io/badge/Milvus-2.4.5-00A1EA.svg?style=flat&logo=milvus&logoColor=white)](https://milvus.io/)
 [![OpenSearch](https://img.shields.io/badge/OpenSearch-2.x%20%7C%203.x-005EB8.svg?style=flat&logo=opensearch&logoColor=white)](https://opensearch.org/)
@@ -308,6 +309,7 @@ The script covers:
 - **Apache Ozone 2.2.0**: High-performance distributed object store offloading large document payloads with dual client strategy:
   - **Native Ozone Client (`ofs` / `o3fs`)**: Direct gRPC/RPC transport to DataNodes & Ozone Manager (OM) for maximum throughput.
   - **S3 Gateway Client (`s3g`)**: Standard AWS S3 SDK integration hitting Ozone's S3 Gateway endpoint for maximum cloud versatility.
+- **Repository Connectors**: Multi-source connectors for Filesystem, Alfresco Content Services (ACS), Apache Iceberg, and **Flowable BPMN** engine (historic process instances & BPMN variable ingestion).
 - **pgvector**: High-dimensional vector similarity search in PostgreSQL.
 - **Milvus**: High-performance, distributed vector database for large-scale enterprise vector indexing.
 - **Redis Stack**: Lightweight caching and session management.
