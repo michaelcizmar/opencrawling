@@ -21,6 +21,7 @@
 [![OIS](https://img.shields.io/badge/OIS-Open_Ingestion_Standard-0052CC.svg?style=flat)](https://github.com/opencrawling/open-ingestion-standard)
 [![MCP](https://img.shields.io/badge/MCP-Model_Context_Protocol-8A2BE2.svg?style=flat&logo=anthropic&logoColor=white)](https://modelcontextprotocol.io/)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-AIOps-7B42BC.svg?style=flat&logo=opentelemetry&logoColor=white)](https://opentelemetry.io/)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/opencrawling/opencrawling/badge)](https://scorecard.dev/viewer/?uri=github.com/opencrawling/opencrawling)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/opencrawling/opencrawling)
 
 **OpenCrawling** is the reference Java and Spring Framework implementation of the **[Open Ingestion Standard (OIS)](https://github.com/opencrawling/open-ingestion-standard)**. It provides a secure, decoupled, and vendor-neutral enterprise data integration platform leveraging modern Java 25 features (such as Structured Concurrency and Virtual Threads), Spring Boot, Spring AI, and vector search infrastructure to orchestrate data flows from various repository connectors to vector search outputs.
