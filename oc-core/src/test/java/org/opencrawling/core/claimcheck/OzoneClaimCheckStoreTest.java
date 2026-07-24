@@ -17,7 +17,10 @@ package org.opencrawling.core.claimcheck;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,7 +40,40 @@ class OzoneClaimCheckStoreTest {
 
         assertThat(ozoneStore.supports(URI.create("s3://claims/doc-123.pdf"))).isTrue();
         assertThat(ozoneStore.supports(URI.create("ofs://s3v/claims/doc-123.pdf"))).isTrue();
+        assertThat(ozoneStore.supports(URI.create("o3fs://s3v/claims/doc-123.pdf"))).isTrue();
         assertThat(ozoneStore.supports(URI.create("file:///data/claims/doc-123.pdf"))).isFalse();
         assertThat(ozoneStore.supports(null)).isFalse();
+    }
+
+    @Test
+    void testNativeOzoneClientStrategyOperations() throws Exception {
+        ClaimCheckProperties.Ozone ozoneProps = new ClaimCheckProperties.Ozone();
+        ozoneProps.setClientType("NATIVE");
+        ozoneProps.setOmHost("localhost");
+        ozoneProps.setOmPort(9862);
+        ozoneProps.setVolume("s3v");
+        ozoneProps.setBucket("claims");
+
+        OzoneClaimCheckStore ozoneStore = new OzoneClaimCheckStore(ozoneProps);
+
+        assertThat(ozoneStore.getPrimaryStrategy()).isInstanceOf(OzoneNativeClientStrategy.class);
+
+        String text = "High-performance native Ozone claim check content";
+        ByteArrayInputStream is = new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
+
+        URI storedUri = ozoneStore.put("native-doc-1", is, text.length(), "text/plain");
+
+        assertThat(storedUri).isNotNull();
+        assertThat(storedUri.getScheme()).isEqualTo("ofs");
+        assertThat(storedUri.toString()).contains("s3v/claims/native-doc-1");
+
+        InputStream retrievedStream = ozoneStore.get(storedUri);
+        String retrievedText = new String(retrievedStream.readAllBytes(), StandardCharsets.UTF_8);
+
+        assertThat(retrievedText).isEqualTo(text);
+
+        ozoneStore.delete(storedUri);
+        InputStream emptyStream = ozoneStore.get(storedUri);
+        assertThat(emptyStream.readAllBytes()).isEmpty();
     }
 }
