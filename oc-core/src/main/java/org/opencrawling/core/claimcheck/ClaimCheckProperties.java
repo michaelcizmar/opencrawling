@@ -79,7 +79,7 @@ public class ClaimCheckProperties {
     }
 
     public static class Ozone {
-        private String clientType = "S3"; // Options: "S3" (s3g/HTTP) or "NATIVE" (ofs/RPC)
+        private String clientType = "NATIVE"; // Options: "NATIVE" (ofs/RPC, default) or "S3" (s3g/HTTP)
         private String s3Endpoint = "http://localhost:9878";
         private String omHost = "localhost";
         private int omPort = 9862;
