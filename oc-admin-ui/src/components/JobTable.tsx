@@ -340,6 +340,12 @@ export default function JobTable({ setActiveView }: JobTableProps) {
           placeholder: 'e.g. invoice-process or / for all',
           description: 'Process definition key filter (e.g. invoice-process) or / to scan all historic process instances.'
         };
+      case 'org.opencrawling.camunda.CamundaRepositoryConnector':
+        return {
+          label: 'Process Definition Key / Scan Filter',
+          placeholder: 'e.g. invoice-process or / for all',
+          description: 'Process definition key filter (e.g. invoice-process) or / to scan all historic process instances.'
+        };
       default:
         return {
           label: 'Crawl Scan Path / URL',
