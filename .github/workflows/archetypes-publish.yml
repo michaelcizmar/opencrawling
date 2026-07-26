@@ -61,7 +61,7 @@ jobs:
 
       - name: Deploy Archetypes via Sonatype Central Publishing Plugin
         run: |
-          cd opencrawling-connector-archetypes
+          cd oc-connector-archetypes
           mvn clean deploy -DskipTests \
             -DaltDeploymentRepository=central::default::https://central.sonatype.com/api/v1/publisher/deploy \
             -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"

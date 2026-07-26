@@ -101,7 +101,7 @@
         <module>oc-opensearch3-output-connector</module>
         <module>oc-flowable-repository-connector</module>
         <module>oc-camunda-repository-connector</module>
-        <module>opencrawling-connector-archetypes</module>
+        <module>pc-connector-archetypes</module>
     </modules>
 
     <properties>
