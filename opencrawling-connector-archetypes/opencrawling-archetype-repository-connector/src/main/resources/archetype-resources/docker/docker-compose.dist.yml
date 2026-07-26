@@ -78,6 +78,8 @@ services:
       - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
       - OPENCRAWLING_PLUGINS_PATH=/app/plugins
+      - LOADER_PATH=/app/plugins
+      - JAVA_OPTS=-Dloader.path=/app/plugins
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,6 +87,17 @@ services:
         condition: service_healthy
     networks:
       - opencrawling-network
+
+  oc-admin-ui:
+    image: ghcr.io/opencrawling/oc-admin-ui:latest
+    container_name: oc-admin-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - opencrawling-backend
+    networks:
+      - opencrawling-network
+    restart: unless-stopped
 
 networks:
   opencrawling-network:

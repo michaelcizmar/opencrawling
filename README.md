@@ -323,9 +323,9 @@ mvn archetype:generate \
   -DarchetypeArtifactId=opencrawling-archetype-repository-connector \
   -DarchetypeVersion=1.0.0-SNAPSHOT \
   -DgroupId=org.opencrawling.connectors \
-  -DartifactId=opencrawling-repository-confluence \
+  -DartifactId=opencrawling-repository-sample \
   -Dversion=1.0.0-SNAPSHOT \
-  -DconnectorName=ConfluenceRepositoryConnector
+  -DconnectorName=SampleRepositoryConnector
 
 # Generate an Output Connector (Vector Store / Destination)
 mvn archetype:generate \
@@ -333,9 +333,9 @@ mvn archetype:generate \
   -DarchetypeArtifactId=opencrawling-archetype-output-connector \
   -DarchetypeVersion=1.0.0-SNAPSHOT \
   -DgroupId=org.opencrawling.connectors \
-  -DartifactId=opencrawling-output-milvus \
+  -DartifactId=opencrawling-output-sample \
   -Dversion=1.0.0-SNAPSHOT \
-  -DconnectorName=MilvusOutputConnector
+  -DconnectorName=SampleOutputConnector
 
 # Generate a Transformation Connector (Data Processing / Enrichment)
 mvn archetype:generate \
@@ -343,16 +343,16 @@ mvn archetype:generate \
   -DarchetypeArtifactId=opencrawling-archetype-transformation-connector \
   -DarchetypeVersion=1.0.0-SNAPSHOT \
   -DgroupId=org.opencrawling.connectors \
-  -DartifactId=opencrawling-transformation-anonymizer \
+  -DartifactId=opencrawling-transformation-sample \
   -Dversion=1.0.0-SNAPSHOT \
-  -DconnectorName=AnonymizerTransformationConnector
+  -DconnectorName=SampleTransformationConnector
 ```
 
 ### Docker Compose Overlay & Integration Testing
 
 Every generated archetype comes pre-configured with:
 - **Unit & Integration Test Suite**: Uses JUnit 5, Reactor `StepVerifier`, and `maven-failsafe-plugin` (`*IT.java` execution via `mvn verify`).
-- **Official OpenCrawling Docker Compose Distribution (`docker/docker-compose.dist.yml`)**: Launches OpenCrawling backend, Postgres + pgvector, Redis Stack, and Kafka.
+- **Official OpenCrawling Docker Compose Distribution (`docker/docker-compose.dist.yml`)**: Launches OpenCrawling backend, Admin UI (`http://localhost:3000`), Postgres + pgvector, Redis Stack, and Kafka.
 - **Docker Compose Overlay (`docker/docker-compose.override.yml`)**: Overlays the custom compiled connector JAR into the running OpenCrawling container volume (`/app/plugins/`).
 
 ```bash
@@ -361,6 +361,9 @@ mvn clean package
 
 # Start OpenCrawling Docker environment with custom connector overlay
 docker compose -f docker/docker-compose.dist.yml -f docker/docker-compose.override.yml up -d
+
+# Interactively configure, run, and monitor jobs using your connector in Admin UI:
+# Open http://localhost:3000 in your browser
 
 # Execute unit and integration tests
 mvn verify

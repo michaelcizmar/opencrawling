@@ -16,6 +16,12 @@
 
 services:
   opencrawling-backend:
+    environment:
+      - OPENCRAWLING_PLUGINS_PATH=/app/plugins
+      - LOADER_PATH=/app/plugins
+      - JAVA_OPTS=-Dloader.path=/app/plugins
     volumes:
       # Overlay the custom built connector artifact into OpenCrawling runtime plugins folder
       - ../target/${artifactId}-${version}.jar:/app/plugins/${artifactId}.jar:ro
+      # Overlay initial connectors seed configuration for the Admin UI
+      - ./connectors.json:/data/connectors.json:rw
