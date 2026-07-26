@@ -22,7 +22,7 @@ on:
       release_version:
         description: 'Release version for archetypes (e.g. 1.0.0)'
         required: false
-        default: ''
+        default: '1.0.0'
 
 jobs:
   publish-archetypes:
