@@ -52,7 +52,9 @@ jobs:
           RELEASE_VER="${{ inputs.release_version }}"
           if [ -n "$RELEASE_VER" ]; then
             echo "Setting release version to $RELEASE_VER"
-            mvn versions:set -DnewVersion=$RELEASE_VER -DgenerateBackupPoms=false
+            cd oc-connector-archetypes
+            mvn versions:set -DnewVersion=$RELEASE_VER -DprocessParents=true -DgenerateBackupPoms=false
+            cd ..
           fi
 
       - name: Build Core Dependencies
