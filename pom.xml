@@ -78,12 +78,12 @@
         </developer>
     </developers>
 
+    <url>https://github.com/opencrawling/opencrawling</url>
+
     <scm>
-        <connection>
-            scm:git:git://github.com/your-username/opencrawling.git</connection>
-        <developerConnection>
-            scm:git:ssh://github.com:your-username/opencrawling.git</developerConnection>
-        <url>https://github.com/your-username/opencrawling/tree/main</url>
+        <connection>scm:git:git://github.com/opencrawling/opencrawling.git</connection>
+        <developerConnection>scm:git:ssh://github.com:opencrawling/opencrawling.git</developerConnection>
+        <url>https://github.com/opencrawling/opencrawling/tree/main</url>
     </scm>
 
     <modules>

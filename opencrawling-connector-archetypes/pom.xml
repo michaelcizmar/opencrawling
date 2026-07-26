@@ -36,6 +36,56 @@
     <name>OpenCrawling - Connector Archetypes Parent</name>
     <description>Suite of Maven Archetypes for creating OpenCrawling Repository, Output, and Transformation Connectors</description>
 
+    <url>https://github.com/opencrawling/opencrawling</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>OpenPj</id>
+            <name>Piergiorgio Lucidi</name>
+            <email>piergiorgio@apache.org</email>
+            <timezone>Europe/Rome</timezone>
+            <roles>
+                <role>Founder</role>
+                <role>Lead Architect</role>
+                <role>Lead Developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>michaelcizmar</id>
+            <name>Michael Cizmar</name>
+            <email>michael@michaelcizmar.com</email>
+            <timezone>America/Chicago</timezone>
+            <roles>
+                <role>Lead Architect</role>
+                <role>Lead Developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>lcabaceira</id>
+            <name>Luis Cabaceira</name>
+            <email>luis.cabaceira@texter.ai</email>
+            <timezone>Europe/Lisbon</timezone>
+            <roles>
+                <role>Lead Architect</role>
+                <role>Lead Developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/opencrawling/opencrawling.git</connection>
+        <developerConnection>scm:git:ssh://github.com:opencrawling/opencrawling.git</developerConnection>
+        <url>https://github.com/opencrawling/opencrawling/tree/main</url>
+    </scm>
+
     <modules>
         <module>opencrawling-archetype-repository-connector</module>
         <module>opencrawling-archetype-output-connector</module>
