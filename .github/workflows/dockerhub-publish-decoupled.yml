@@ -1,9 +1,6 @@
 name: Publish Decoupled Docker Hub Images
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 env:
