@@ -289,6 +289,19 @@
         </pluginRepository>
     </pluginRepositories>
 
+    <distributionManagement>
+        <repository>
+            <id>central</id>
+            <name>Central Portal Repository</name>
+            <url>https://central.sonatype.com/api/v1/publisher/deploy</url>
+        </repository>
+        <snapshotRepository>
+            <id>central</id>
+            <name>Central Portal Snapshot Repository</name>
+            <url>https://central.sonatype.com/api/v1/publisher/deploy</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <profiles>
         <profile>
             <id>eclipse-only</id>

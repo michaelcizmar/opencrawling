@@ -64,6 +64,7 @@ jobs:
           mvn clean deploy -DskipTests \
             -pl opencrawling-connector-archetypes \
             -am \
+            -DaltDeploymentRepository=central::default::https://central.sonatype.com/api/v1/publisher/deploy \
             -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
