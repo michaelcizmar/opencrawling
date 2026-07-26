@@ -1,7 +1,11 @@
 name: Publish Docker Images
 
 on:
+  push:
+    branches: [ main, master ]
   workflow_dispatch:
+
+permissions: read-all
 
 env:
   REGISTRY: ghcr.io

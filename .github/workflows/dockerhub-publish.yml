@@ -3,6 +3,8 @@ name: Publish Docker Hub Images
 on:
   workflow_dispatch:
 
+permissions: read-all
+
 env:
   DOCKERHUB_ORG: opencrawling
 

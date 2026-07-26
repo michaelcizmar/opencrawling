@@ -24,6 +24,8 @@ on:
         required: false
         default: '1.0.0'
 
+permissions: read-all
+
 jobs:
   publish-archetypes:
     name: Build & Publish Connector Archetypes
