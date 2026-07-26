@@ -23,6 +23,8 @@
 [![OIS](https://img.shields.io/badge/OIS-Open_Ingestion_Standard-0052CC.svg?style=flat)](https://github.com/opencrawling/open-ingestion-standard)
 [![MCP](https://img.shields.io/badge/MCP-Model_Context_Protocol-8A2BE2.svg?style=flat&logo=anthropic&logoColor=white)](https://modelcontextprotocol.io/)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-AIOps-7B42BC.svg?style=flat&logo=opentelemetry&logoColor=white)](https://opentelemetry.io/)
+[![Maven Archetypes](https://img.shields.io/badge/Maven_Archetypes-Supported-C71A36.svg?style=flat&logo=apachemaven&logoColor=white)](#-custom-connectors-maven-archetypes-suite)
+[![Maven Central](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-connector-archetypes.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-connector-archetypes)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/opencrawling/opencrawling/badge)](https://scorecard.dev/viewer/?uri=github.com/opencrawling/opencrawling)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/opencrawling/opencrawling)
 
@@ -304,15 +306,18 @@ The script covers:
 
 ## 📦 Custom Connectors: Maven Archetypes Suite
 
+[![Maven Archetypes](https://img.shields.io/badge/Maven_Archetypes-Supported-C71A36.svg?style=flat&logo=apachemaven&logoColor=white)](#-custom-connectors-maven-archetypes-suite)
+[![Maven Central - Parent](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-connector-archetypes.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-connector-archetypes)
+
 OpenCrawling provides an official suite of **Maven Archetypes** under `opencrawling-connector-archetypes` allowing developers and ecosystem partners to instantly scaffold ready-to-build, standardized custom connectors with a single `mvn archetype:generate` command.
 
 ### Available Archetypes
 
-| Archetype Artifact ID | Connector Type | Description & SPI Interface |
-|---|---|---|
-| `opencrawling-archetype-repository-connector` | **Repository Connector** | Ingestion sources (CMS, REST APIs, Databases, File Systems). Implements `RepositoryConnector` (`Flux<RepositoryDocument>`). |
-| `opencrawling-archetype-output-connector` | **Output Connector** | Ingestion destinations (Vector DBs, OpenSearch, Elasticsearch, S3). Implements `OutputConnector` (`Mono<Void>`). |
-| `opencrawling-archetype-transformation-connector` | **Transformation Connector** | Data processing, chunking, and AI enrichment. Implements `TransformationConnector` (`Flux<RepositoryDocument>`). |
+| Archetype Artifact ID | Maven Central | Connector Type | Description & SPI Interface |
+|---|---|---|---|
+| `opencrawling-archetype-repository-connector` | [![Maven Central](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-archetype-repository-connector.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-archetype-repository-connector) | **Repository Connector** | Ingestion sources (CMS, REST APIs, Databases, File Systems). Implements `RepositoryConnector` (`Flux<RepositoryDocument>`). |
+| `opencrawling-archetype-output-connector` | [![Maven Central](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-archetype-output-connector.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-archetype-output-connector) | **Output Connector** | Ingestion destinations (Vector DBs, OpenSearch, Elasticsearch, S3). Implements `OutputConnector` (`Mono<Void>`). |
+| `opencrawling-archetype-transformation-connector` | [![Maven Central](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-archetype-transformation-connector.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-archetype-transformation-connector) | **Transformation Connector** | Data processing, chunking, and AI enrichment. Implements `TransformationConnector` (`Flux<RepositoryDocument>`). |
 
 ### Quickstart CLI Commands
 
