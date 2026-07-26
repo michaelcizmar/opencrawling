@@ -302,6 +302,75 @@ The script covers:
 
 ---
 
+## 📦 Custom Connectors: Maven Archetypes Suite
+
+OpenCrawling provides an official suite of **Maven Archetypes** under `opencrawling-connector-archetypes` allowing developers and ecosystem partners to instantly scaffold ready-to-build, standardized custom connectors with a single `mvn archetype:generate` command.
+
+### Available Archetypes
+
+| Archetype Artifact ID | Connector Type | Description & SPI Interface |
+|---|---|---|
+| `opencrawling-archetype-repository-connector` | **Repository Connector** | Ingestion sources (CMS, REST APIs, Databases, File Systems). Implements `RepositoryConnector` (`Flux<RepositoryDocument>`). |
+| `opencrawling-archetype-output-connector` | **Output Connector** | Ingestion destinations (Vector DBs, OpenSearch, Elasticsearch, S3). Implements `OutputConnector` (`Mono<Void>`). |
+| `opencrawling-archetype-transformation-connector` | **Transformation Connector** | Data processing, chunking, and AI enrichment. Implements `TransformationConnector` (`Flux<RepositoryDocument>`). |
+
+### Quickstart CLI Commands
+
+```bash
+# Generate a Repository Connector (Ingestion Source)
+mvn archetype:generate \
+  -DarchetypeGroupId=org.opencrawling.archetypes \
+  -DarchetypeArtifactId=opencrawling-archetype-repository-connector \
+  -DarchetypeVersion=1.0.0-SNAPSHOT \
+  -DgroupId=org.opencrawling.connectors \
+  -DartifactId=opencrawling-repository-confluence \
+  -Dversion=1.0.0-SNAPSHOT \
+  -DconnectorName=ConfluenceRepositoryConnector
+
+# Generate an Output Connector (Vector Store / Destination)
+mvn archetype:generate \
+  -DarchetypeGroupId=org.opencrawling.archetypes \
+  -DarchetypeArtifactId=opencrawling-archetype-output-connector \
+  -DarchetypeVersion=1.0.0-SNAPSHOT \
+  -DgroupId=org.opencrawling.connectors \
+  -DartifactId=opencrawling-output-milvus \
+  -Dversion=1.0.0-SNAPSHOT \
+  -DconnectorName=MilvusOutputConnector
+
+# Generate a Transformation Connector (Data Processing / Enrichment)
+mvn archetype:generate \
+  -DarchetypeGroupId=org.opencrawling.archetypes \
+  -DarchetypeArtifactId=opencrawling-archetype-transformation-connector \
+  -DarchetypeVersion=1.0.0-SNAPSHOT \
+  -DgroupId=org.opencrawling.connectors \
+  -DartifactId=opencrawling-transformation-anonymizer \
+  -Dversion=1.0.0-SNAPSHOT \
+  -DconnectorName=AnonymizerTransformationConnector
+```
+
+### Docker Compose Overlay & Integration Testing
+
+Every generated archetype comes pre-configured with:
+- **Unit & Integration Test Suite**: Uses JUnit 5, Reactor `StepVerifier`, and `maven-failsafe-plugin` (`*IT.java` execution via `mvn verify`).
+- **Official OpenCrawling Docker Compose Distribution (`docker/docker-compose.dist.yml`)**: Launches OpenCrawling backend, Postgres + pgvector, Redis Stack, and Kafka.
+- **Docker Compose Overlay (`docker/docker-compose.override.yml`)**: Overlays the custom compiled connector JAR into the running OpenCrawling container volume (`/app/plugins/`).
+
+```bash
+# Build custom connector JAR
+mvn clean package
+
+# Start OpenCrawling Docker environment with custom connector overlay
+docker compose -f docker/docker-compose.dist.yml -f docker/docker-compose.override.yml up -d
+
+# Execute unit and integration tests
+mvn verify
+
+# Tear down Docker environment
+docker compose -f docker/docker-compose.dist.yml -f docker/docker-compose.override.yml down
+```
+
+---
+
 ## Core Technologies
 
 - **Java 25 Preview Features**: Structured Concurrency, Virtual Threads, and Pattern Matching.
