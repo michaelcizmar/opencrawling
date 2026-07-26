@@ -71,6 +71,30 @@ public class ConnectorController {
         
         // Load persisted list
         this.storage = new CopyOnWriteArrayList<>(PersistenceHelper.loadList("connectors.json", ConnectorDTO.class, defaults));
+        
+        // Dynamically discover SPI connectors loaded via plugin classloaders
+        try {
+            java.util.ServiceLoader.load(org.opencrawling.core.connector.RepositoryConnector.class).forEach(conn -> {
+                String name = conn.getName();
+                if (storage.stream().noneMatch(c -> c.name().equalsIgnoreCase(name))) {
+                    storage.add(new ConnectorDTO(name, name + " (Dynamic Repository Connector)", "repository", conn.getClass().getName(), 10, new HashMap<>()));
+                }
+            });
+            java.util.ServiceLoader.load(org.opencrawling.core.connector.OutputConnector.class).forEach(conn -> {
+                String name = conn.getName();
+                if (storage.stream().noneMatch(c -> c.name().equalsIgnoreCase(name))) {
+                    storage.add(new ConnectorDTO(name, name + " (Dynamic Output Connector)", "output", conn.getClass().getName(), 10, new HashMap<>()));
+                }
+            });
+            java.util.ServiceLoader.load(org.opencrawling.core.connector.TransformationConnector.class).forEach(conn -> {
+                String name = conn.getName();
+                if (storage.stream().noneMatch(c -> c.name().equalsIgnoreCase(name))) {
+                    storage.add(new ConnectorDTO(name, name + " (Dynamic Transformation Connector)", "transformation", conn.getClass().getName(), 10, new HashMap<>()));
+                }
+            });
+        } catch (Throwable t) {
+            System.err.println("Notice: Dynamic SPI Connector discovery skipped: " + t.getMessage());
+        }
     }
 
     @GetMapping("/{type}")
