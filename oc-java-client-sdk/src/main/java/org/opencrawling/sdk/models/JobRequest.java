@@ -28,6 +28,10 @@ public record JobRequest(
     String outputConnector,
     String authorityConnector,
     String path,
+    String status,
+    String currentStage,
+    long documents,
+    String lastRun,
     String transformationConnector,
     NarrativizationConfig narrativization
 ) {
@@ -43,6 +47,10 @@ public record JobRequest(
         private String outputConnector = "PGVector_Output";
         private String authorityConnector = "";
         private String path = "/data";
+        private String status = "Ready";
+        private String currentStage = "Idle";
+        private long documents = 0;
+        private String lastRun = "N/A";
         private String transformationConnector = "Ollama_Embedding_Default";
         private NarrativizationConfig narrativization;
 
@@ -81,6 +89,26 @@ public record JobRequest(
             return this;
         }
 
+        public Builder status(String status) {
+            this.status = status;
+            return this;
+        }
+
+        public Builder currentStage(String currentStage) {
+            this.currentStage = currentStage;
+            return this;
+        }
+
+        public Builder documents(long documents) {
+            this.documents = documents;
+            return this;
+        }
+
+        public Builder lastRun(String lastRun) {
+            this.lastRun = lastRun;
+            return this;
+        }
+
         public Builder transformationConnector(String transformationConnector) {
             this.transformationConnector = transformationConnector;
             return this;
@@ -99,6 +127,10 @@ public record JobRequest(
                 outputConnector,
                 authorityConnector,
                 path,
+                status,
+                currentStage,
+                documents,
+                lastRun,
                 transformationConnector,
                 narrativization != null ? narrativization : NarrativizationConfig.disabled()
             );
