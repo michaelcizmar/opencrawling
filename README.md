@@ -206,6 +206,7 @@ Schema Context (connectorType + fields)
 | `IcebergRepositoryConnector.getSchema()` | `oc-iceberg-repository-connector` | Returns the live Apache Iceberg table schema as a `ConnectorSchema` |
 | `TemplateGenerationCopilot` | `oc-runtime` | Spring AI client that calls the configured LLM (Ollama default) or falls back to deterministic generation |
 | `NarrativizationCopilotController` | `oc-runtime` | REST controller exposing `POST /api/transformation/copilot/generate` |
+| `OpenCrawlingClient` | `oc-java-client-sdk` | Strongly typed Java Client SDK & Spring Boot starter for jobs, connectors, AIOps diagnostics, and copilot |
 
 ### REST API
 

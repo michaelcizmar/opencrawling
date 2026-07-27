@@ -1,0 +1,72 @@
+#
+# Copyright © 2026 the original author or authors (piergiorgio@apache.org)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Publish Java SDK to Maven Central
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version for oc-java-client-sdk (e.g. 1.0.0)'
+        required: false
+        default: '1.0.0'
+
+permissions: read-all
+
+jobs:
+  publish-sdk:
+    name: Build & Publish Java Client SDK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.6.0
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      - name: Set Release Version (if specified)
+        run: |
+          RELEASE_VER="${{ inputs.release_version }}"
+          if [ -n "$RELEASE_VER" ]; then
+            echo "Setting release version to $RELEASE_VER"
+            mvn versions:set -DnewVersion=$RELEASE_VER -pl oc-java-client-sdk -DgenerateBackupPoms=false
+          fi
+
+      - name: Build Core Dependencies
+        run: |
+          mvn clean install -DskipTests -pl oc-core -am
+
+      - name: Deploy Java Client SDK to Maven Central
+        run: |
+          mvn clean deploy -pl oc-java-client-sdk -DskipTests \
+            -DaltDeploymentRepository=central::default::https://central.sonatype.com/api/v1/publisher/deploy \
+            -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}

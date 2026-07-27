@@ -102,6 +102,7 @@
         <module>oc-flowable-repository-connector</module>
         <module>oc-camunda-repository-connector</module>
         <module>oc-connector-archetypes</module>
+        <module>oc-java-client-sdk</module>
     </modules>
 
     <properties>
