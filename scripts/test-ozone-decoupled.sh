@@ -25,10 +25,12 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Set Ozone as active Claim Check store for decoupled containers
+# Set Ozone as active Claim Check store and configure client implementation strategy (NATIVE vs S3)
 export SPRING_OPENCRAWLING_CLAIM_CHECK_STORE=ozone
+export SPRING_OPENCRAWLING_CLAIM_CHECK_OZONE_CLIENT_TYPE="${OZONE_CLIENT_TYPE:-NATIVE}"
 
 echo -e "${YELLOW}=== Starting OpenCrawling Apache Ozone Claim Check Ingestion Pipeline Integration Test ===${NC}"
+echo -e "${YELLOW}Active Ozone Client Strategy: ${GREEN}${SPRING_OPENCRAWLING_CLAIM_CHECK_OZONE_CLIENT_TYPE}${NC}"
 
 # Get the directory where this script is located and switch to the project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

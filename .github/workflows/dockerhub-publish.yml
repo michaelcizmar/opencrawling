@@ -1,10 +1,9 @@
 name: Publish Docker Hub Images
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
+
+permissions: read-all
 
 env:
   DOCKERHUB_ORG: opencrawling

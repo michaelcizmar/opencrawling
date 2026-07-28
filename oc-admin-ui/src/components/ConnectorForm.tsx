@@ -173,6 +173,8 @@ export default function ConnectorForm() {
       { label: 'File System', value: 'org.opencrawling.crawler.connectors.filesystem.FileConnector' },
       { label: 'Alfresco Content Services Repository', value: 'org.opencrawling.alfresco.AlfrescoRepositoryConnector' },
       { label: 'Apache Iceberg Catalog Table', value: 'org.opencrawling.iceberg.IcebergRepositoryConnector' },
+      { label: 'Flowable Repository Connector', value: 'org.opencrawling.flowable.FlowableRepositoryConnector' },
+      { label: 'Camunda Repository Connector', value: 'org.opencrawling.camunda.CamundaRepositoryConnector' },
     ],
     transformation: [
       { label: 'Ollama Embedding', value: 'org.opencrawling.embedding.OllamaEmbeddingConnector' },
@@ -418,6 +420,156 @@ export default function ConnectorForm() {
                           defaultValue="100"
                           className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
                         />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Flowable Repository Connector */}
+                  {selectedClass === 'org.opencrawling.flowable.FlowableRepositoryConnector' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 col-span-2">
+                        <label className="text-sm font-medium">Flowable REST API URL</label>
+                        <input 
+                          {...register('configuration.url', { required: true })}
+                          placeholder="http://localhost:8080/flowable-rest/service"
+                          defaultValue="http://localhost:8080/flowable-rest/service"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Username</label>
+                        <input 
+                          {...register('configuration.username', { required: true })}
+                          placeholder="admin"
+                          defaultValue="admin"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Password</label>
+                        <input 
+                          type="password"
+                          {...register('configuration.password', { required: true })}
+                          placeholder="test"
+                          defaultValue="test"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Batch Size</label>
+                        <input 
+                          type="number"
+                          {...register('configuration.batchSize')}
+                          defaultValue="100"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Process Definition Key (Filter)</label>
+                        <input 
+                          {...register('configuration.processDefinitionKey')}
+                          placeholder="e.g. invoice-process"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Scope</label>
+                        <select 
+                          {...register('configuration.scope')}
+                          defaultValue="all"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        >
+                          <option value="all">All (Active & Completed)</option>
+                          <option value="completed">Completed Only</option>
+                          <option value="active">Active Only</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2 flex items-center gap-2 pt-6">
+                        <input 
+                          type="checkbox"
+                          id="includeVariables"
+                          {...register('configuration.includeVariables')}
+                          defaultChecked={true}
+                          className="rounded border-border text-primary focus:ring-primary/50"
+                        />
+                        <label htmlFor="includeVariables" className="text-sm font-medium cursor-pointer">
+                          Include Historic BPMN Variables
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Camunda Repository Connector */}
+                  {selectedClass === 'org.opencrawling.camunda.CamundaRepositoryConnector' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 col-span-2">
+                        <label className="text-sm font-medium">Camunda REST API Base URL</label>
+                        <input 
+                          {...register('configuration.url', { required: true })}
+                          placeholder="http://localhost:8080/engine-rest"
+                          defaultValue="http://localhost:8080/engine-rest"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Username</label>
+                        <input 
+                          {...register('configuration.username')}
+                          placeholder="demo"
+                          defaultValue="demo"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Password</label>
+                        <input 
+                          type="password"
+                          {...register('configuration.password')}
+                          placeholder="demo"
+                          defaultValue="demo"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Batch Size</label>
+                        <input 
+                          type="number"
+                          {...register('configuration.batchSize', { valueAsNumber: true })}
+                          defaultValue={100}
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Process Definition Key (Optional)</label>
+                        <input 
+                          {...register('configuration.processDefinitionKey')}
+                          placeholder="e.g. invoice-process"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Workflow Instance Scope</label>
+                        <select 
+                          {...register('configuration.scope')}
+                          defaultValue="all"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        >
+                          <option value="all">All (Active & Completed)</option>
+                          <option value="completed">Completed Only</option>
+                          <option value="active">Active Only</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2 flex items-center gap-2 pt-6">
+                        <input 
+                          type="checkbox"
+                          id="includeVariablesCamunda"
+                          {...register('configuration.includeVariables')}
+                          defaultChecked={true}
+                          className="rounded border-border text-primary focus:ring-primary/50"
+                        />
+                        <label htmlFor="includeVariablesCamunda" className="text-sm font-medium cursor-pointer">
+                          Include Historic BPMN Variables
+                        </label>
                       </div>
                     </div>
                   )}

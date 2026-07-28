@@ -13,6 +13,8 @@
 [![Apache Ozone](https://img.shields.io/badge/Apache_Ozone-2.2.0-FF6600.svg?style=flat&logo=apache&logoColor=white)](https://ozone.apache.org/)
 [![Apache Tika](https://img.shields.io/badge/Apache_Tika-3.x-007396.svg?style=flat&logo=apache&logoColor=white)](https://tika.apache.org/)
 [![Alfresco](https://img.shields.io/badge/Alfresco_Content_Services-Supported-0090DF.svg?style=flat&logo=alfresco&logoColor=white)](https://www.alfresco.com/)
+[![Flowable](https://img.shields.io/badge/Flowable_BPMN-Supported-007ACC.svg?style=flat&logo=flowable&logoColor=white)](https://www.flowable.com/)
+[![Camunda](https://img.shields.io/badge/Camunda_BPM-Supported-E10076.svg?style=flat&logo=camunda&logoColor=white)](https://camunda.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17+-blue.svg?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Milvus](https://img.shields.io/badge/Milvus-2.4.5-00A1EA.svg?style=flat&logo=milvus&logoColor=white)](https://milvus.io/)
 [![OpenSearch](https://img.shields.io/badge/OpenSearch-2.x%20%7C%203.x-005EB8.svg?style=flat&logo=opensearch&logoColor=white)](https://opensearch.org/)
@@ -21,6 +23,9 @@
 [![OIS](https://img.shields.io/badge/OIS-Open_Ingestion_Standard-0052CC.svg?style=flat)](https://github.com/opencrawling/open-ingestion-standard)
 [![MCP](https://img.shields.io/badge/MCP-Model_Context_Protocol-8A2BE2.svg?style=flat&logo=anthropic&logoColor=white)](https://modelcontextprotocol.io/)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-AIOps-7B42BC.svg?style=flat&logo=opentelemetry&logoColor=white)](https://opentelemetry.io/)
+[![Maven Archetypes](https://img.shields.io/badge/Maven_Archetypes-Supported-C71A36.svg?style=flat&logo=apachemaven&logoColor=white)](#-custom-connectors-maven-archetypes-suite)
+[![Maven Central](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-connector-archetypes.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-connector-archetypes)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/opencrawling/opencrawling/badge)](https://scorecard.dev/viewer/?uri=github.com/opencrawling/opencrawling)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/opencrawling/opencrawling)
 
 **OpenCrawling** is the reference Java and Spring Framework implementation of the **[Open Ingestion Standard (OIS)](https://github.com/opencrawling/open-ingestion-standard)**. It provides a secure, decoupled, and vendor-neutral enterprise data integration platform leveraging modern Java 25 features (such as Structured Concurrency and Virtual Threads), Spring Boot, Spring AI, and vector search infrastructure to orchestrate data flows from various repository connectors to vector search outputs.
@@ -28,6 +33,12 @@
 <p align="center">
   <img src="https://github.com/opencrawling/.github/raw/main/profile/images/logo.png" alt="OpenCrawling Logo" width="200" />
 </p>
+
+---
+
+## 🎬 Admin UI Screencast Walkthrough
+
+![Admin UI Screencast Walkthrough](images/screenshots/admin-ui-walkthrough.gif)
 
 ---
 
@@ -45,6 +56,8 @@ graph TD
         Runtime_Node([OpenCrawling Ingestion Runtime])
         Core[Core Ingestion Engine - oc-core]
         FS_Conn[Filesystem Repository - oc-filesystem-repository-connector]
+        Flowable_Conn[Flowable Repository - oc-flowable-repository-connector]
+        Camunda_Conn[Camunda Repository - oc-camunda-repository-connector]
         
         Ing_Cons[Ingestion Consumer - IngestionConsumer]
         Tika[Apache Tika Text Extractor]
@@ -291,6 +304,81 @@ The script covers:
 
 ---
 
+## 📦 Custom Connectors: Maven Archetypes Suite
+
+[![Maven Archetypes](https://img.shields.io/badge/Maven_Archetypes-Supported-C71A36.svg?style=flat&logo=apachemaven&logoColor=white)](#-custom-connectors-maven-archetypes-suite)
+[![Maven Central - Parent](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-connector-archetypes.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-connector-archetypes)
+
+OpenCrawling provides an official suite of **Maven Archetypes** under `opencrawling-connector-archetypes` allowing developers and ecosystem partners to instantly scaffold ready-to-build, standardized custom connectors with a single `mvn archetype:generate` command.
+
+### Available Archetypes
+
+| Archetype Artifact ID | Maven Central | Connector Type | Description & SPI Interface |
+|---|---|---|---|
+| `opencrawling-archetype-repository-connector` | [![Maven Central](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-archetype-repository-connector.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-archetype-repository-connector) | **Repository Connector** | Ingestion sources (CMS, REST APIs, Databases, File Systems). Implements `RepositoryConnector` (`Flux<RepositoryDocument>`). |
+| `opencrawling-archetype-output-connector` | [![Maven Central](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-archetype-output-connector.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-archetype-output-connector) | **Output Connector** | Ingestion destinations (Vector DBs, OpenSearch, Elasticsearch, S3). Implements `OutputConnector` (`Mono<Void>`). |
+| `opencrawling-archetype-transformation-connector` | [![Maven Central](https://img.shields.io/maven-central/v/org.opencrawling.archetypes/opencrawling-archetype-transformation-connector.svg?style=flat&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/org.opencrawling.archetypes/opencrawling-archetype-transformation-connector) | **Transformation Connector** | Data processing, chunking, and AI enrichment. Implements `TransformationConnector` (`Flux<RepositoryDocument>`). |
+
+### Quickstart CLI Commands
+
+```bash
+# Generate a Repository Connector (Ingestion Source)
+mvn archetype:generate \
+  -DarchetypeGroupId=org.opencrawling.archetypes \
+  -DarchetypeArtifactId=opencrawling-archetype-repository-connector \
+  -DarchetypeVersion=1.0.0-SNAPSHOT \
+  -DgroupId=org.opencrawling.connectors \
+  -DartifactId=opencrawling-repository-sample \
+  -Dversion=1.0.0-SNAPSHOT \
+  -DconnectorName=SampleRepositoryConnector
+
+# Generate an Output Connector (Vector Store / Destination)
+mvn archetype:generate \
+  -DarchetypeGroupId=org.opencrawling.archetypes \
+  -DarchetypeArtifactId=opencrawling-archetype-output-connector \
+  -DarchetypeVersion=1.0.0-SNAPSHOT \
+  -DgroupId=org.opencrawling.connectors \
+  -DartifactId=opencrawling-output-sample \
+  -Dversion=1.0.0-SNAPSHOT \
+  -DconnectorName=SampleOutputConnector
+
+# Generate a Transformation Connector (Data Processing / Enrichment)
+mvn archetype:generate \
+  -DarchetypeGroupId=org.opencrawling.archetypes \
+  -DarchetypeArtifactId=opencrawling-archetype-transformation-connector \
+  -DarchetypeVersion=1.0.0-SNAPSHOT \
+  -DgroupId=org.opencrawling.connectors \
+  -DartifactId=opencrawling-transformation-sample \
+  -Dversion=1.0.0-SNAPSHOT \
+  -DconnectorName=SampleTransformationConnector
+```
+
+### Docker Compose Overlay & Integration Testing
+
+Every generated archetype comes pre-configured with:
+- **Unit & Integration Test Suite**: Uses JUnit 5, Reactor `StepVerifier`, and `maven-failsafe-plugin` (`*IT.java` execution via `mvn verify`).
+- **Official OpenCrawling Docker Compose Distribution (`docker/docker-compose.dist.yml`)**: Launches OpenCrawling backend, Admin UI (`http://localhost:3000`), Postgres + pgvector, Redis Stack, and Kafka.
+- **Docker Compose Overlay (`docker/docker-compose.override.yml`)**: Overlays the custom compiled connector JAR into the running OpenCrawling container volume (`/app/plugins/`).
+
+```bash
+# Build custom connector JAR
+mvn clean package
+
+# Start OpenCrawling Docker environment with custom connector overlay
+docker compose -f docker/docker-compose.dist.yml -f docker/docker-compose.override.yml up -d
+
+# Interactively configure, run, and monitor jobs using your connector in Admin UI:
+# Open http://localhost:3000 in your browser
+
+# Execute unit and integration tests
+mvn verify
+
+# Tear down Docker environment
+docker compose -f docker/docker-compose.dist.yml -f docker/docker-compose.override.yml down
+```
+
+---
+
 ## Core Technologies
 
 - **Java 25 Preview Features**: Structured Concurrency, Virtual Threads, and Pattern Matching.
@@ -298,6 +386,10 @@ The script covers:
 - **OpenTelemetry & Micrometer AIOps**: Automated Root Cause Analysis (RCA) and correlated distributed span telemetry.
 - **Model Context Protocol (MCP)**: System tools exposing vector search and OTel telemetry to LLMs.
 - **Apache Kafka**: Decoupled, event-driven document processing using the **Claim Check Pattern**.
+- **Apache Ozone 2.2.0**: High-performance distributed object store offloading large document payloads with dual client strategy:
+  - **Native Ozone Client (`ofs` / `o3fs`)**: Direct gRPC/RPC transport to DataNodes & Ozone Manager (OM) for maximum throughput.
+  - **S3 Gateway Client (`s3g`)**: Standard AWS S3 SDK integration hitting Ozone's S3 Gateway endpoint for maximum cloud versatility.
+- **Repository Connectors**: Multi-source connectors for Filesystem, Alfresco Content Services (ACS), Apache Iceberg, and **Flowable BPMN** engine (historic process instances & BPMN variable ingestion).
 - **pgvector**: High-dimensional vector similarity search in PostgreSQL.
 - **Milvus**: High-performance, distributed vector database for large-scale enterprise vector indexing.
 - **Redis Stack**: Lightweight caching and session management.
@@ -431,6 +523,39 @@ To run the complete decoupled pipeline using the official pre-built release cont
    ```
 
 This pulls the official `ghcr.io/opencrawling/...` images directly, allowing you to spin up the entire architecture (Crawler, Ingestion, Embedding Service, Writer, MCP Server, and Admin UI) instantly.
+
+---
+
+### Option A.4: Apache Ozone Claim Check Strategy Configuration
+
+OpenCrawling supports offloading raw payload streams to **Apache Ozone** via Spring environment properties or the Admin UI:
+
+```yaml
+opencrawling:
+  claim-check:
+    store: ozone                      # Options: ozone, local
+    cleanup-on-consume: true         # Immediate explicit deletion post-ACK
+    lifecycle:
+      enable-background-gc: true      # Background runner for orphaned payloads
+      ttl-hours: 24                   # Retention window before GC purging
+      gc-cron: "0 0 * * * *"          # Hourly GC cron schedule
+    ozone:
+      client-type: NATIVE             # Options: NATIVE (ofs/o3fs RPC) or S3 (s3g/HTTP)
+      om-host: "localhost"
+      om-port: 9862
+      volume: "s3v"
+      bucket: "claims"
+      s3-endpoint: "http://localhost:9878"
+      access-key: "ozone"
+      secret-key: "ozone-secret"
+```
+
+* **`NATIVE` (Default / High Performance)**: Direct gRPC/RPC communication with DataNodes & Ozone Manager (`ofs://volume/bucket/key`), providing sub-millisecond object offloading.
+* **`S3` (Cloud Versatility)**: Uses the AWS S3 SDK to target Ozone's S3 Gateway (`s3://bucket/key`).
+* **`cleanup-on-consume: true`**: Triggers immediate explicit deletion of offloaded payloads as soon as Kafka chunk extraction receives a post-ingestion ACK.
+* **`lifecycle.enable-background-gc: true`**: Runs a background `ClaimCheckGarbageCollector` on the configured cron schedule (`gc-cron`) to clean up orphaned claim-check objects older than `ttl-hours` caused by node crashes or pipeline failures.
+
+---
 
 ### Option A.4: Decoupled Milvus-Based Deployment (Standalone + etcd + MinIO)
 

@@ -334,6 +334,18 @@ export default function JobTable({ setActiveView }: JobTableProps) {
           placeholder: 'e.g. test_db.test_table',
           description: 'The full name of the Apache Iceberg table to scan (e.g. database.table).'
         };
+      case 'org.opencrawling.flowable.FlowableRepositoryConnector':
+        return {
+          label: 'Process Definition Key / Scan Filter',
+          placeholder: 'e.g. invoice-process or / for all',
+          description: 'Process definition key filter (e.g. invoice-process) or / to scan all historic process instances.'
+        };
+      case 'org.opencrawling.camunda.CamundaRepositoryConnector':
+        return {
+          label: 'Process Definition Key / Scan Filter',
+          placeholder: 'e.g. invoice-process or / for all',
+          description: 'Process definition key filter (e.g. invoice-process) or / to scan all historic process instances.'
+        };
       default:
         return {
           label: 'Crawl Scan Path / URL',
@@ -1044,6 +1056,7 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                             <option value="iceberg">🧊 Iceberg</option>
                             <option value="filesystem">📁 FileSystem</option>
                             <option value="alfresco">🏢 Alfresco</option>
+                            <option value="flowable">🔄 Flowable</option>
                             <option value="custom">⚙️ Custom</option>
                           </select>
                         </div>
@@ -1060,6 +1073,7 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                                 iceberg:    [{ name: 'id', type: 'STRING', description: 'Record identifier' }, { name: 'amount', type: 'DOUBLE', description: 'Transaction amount' }, { name: 'region', type: 'STRING', description: 'Region code' }, { name: 'timestamp', type: 'TIMESTAMP', description: 'Event time' }],
                                 filesystem: [{ name: 'filename', type: 'STRING', description: 'File name' }, { name: 'path', type: 'STRING', description: 'File path' }, { name: 'size', type: 'LONG', description: 'File size in bytes' }, { name: 'extension', type: 'STRING', description: 'File extension' }],
                                 alfresco:   [{ name: 'nodeId', type: 'STRING', description: 'Alfresco node UUID' }, { name: 'title', type: 'STRING', description: 'Document title' }, { name: 'author', type: 'STRING', description: 'Document author' }, { name: 'modified', type: 'DATE', description: 'Last modified date' }],
+                                flowable:   [{ name: 'id', type: 'STRING', description: 'Process instance ID' }, { name: 'processDefinitionKey', type: 'STRING', description: 'BPMN process key' }, { name: 'businessKey', type: 'STRING', description: 'Business key' }, { name: 'startTime', type: 'TIMESTAMP', description: 'Start time' }, { name: 'flowable_var_totalAmount', type: 'DOUBLE', description: 'BPMN total amount variable' }],
                                 custom:     [{ name: 'id', type: 'STRING', description: 'Identifier' }, { name: 'content', type: 'STRING', description: 'Document content' }],
                               }
                               const res = await narrativizationApi.generate({

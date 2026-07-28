@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright © 2026 the original author or authors (piergiorgio@apache.org)
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.opencrawling.archetypes</groupId>
+    <artifactId>opencrawling-connector-archetypes</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>OpenCrawling - Connector Archetypes Parent</name>
+    <description>Suite of Maven Archetypes for creating OpenCrawling Repository, Output, and Transformation Connectors</description>
+
+    <properties>
+        <java.version>25</java.version>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <url>https://github.com/opencrawling/opencrawling</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>OpenPj</id>
+            <name>Piergiorgio Lucidi</name>
+            <email>piergiorgio@apache.org</email>
+            <timezone>Europe/Rome</timezone>
+            <roles>
+                <role>Founder</role>
+                <role>Lead Architect</role>
+                <role>Lead Developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>michaelcizmar</id>
+            <name>Michael Cizmar</name>
+            <email>michael@michaelcizmar.com</email>
+            <timezone>America/Chicago</timezone>
+            <roles>
+                <role>Lead Architect</role>
+                <role>Lead Developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>lcabaceira</id>
+            <name>Luis Cabaceira</name>
+            <email>luis.cabaceira@texter.ai</email>
+            <timezone>Europe/Lisbon</timezone>
+            <roles>
+                <role>Lead Architect</role>
+                <role>Lead Developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/opencrawling/opencrawling.git</connection>
+        <developerConnection>scm:git:ssh://github.com:opencrawling/opencrawling.git</developerConnection>
+        <url>https://github.com/opencrawling/opencrawling/tree/main</url>
+    </scm>
+
+    <modules>
+        <module>opencrawling-archetype-repository-connector</module>
+        <module>opencrawling-archetype-output-connector</module>
+        <module>opencrawling-archetype-transformation-connector</module>
+    </modules>
+
+    <distributionManagement>
+        <repository>
+            <id>central</id>
+            <name>Central Portal Repository</name>
+            <url>https://central.sonatype.com/api/v1/publisher/deploy</url>
+        </repository>
+        <snapshotRepository>
+            <id>central</id>
+            <name>Central Portal Snapshot Repository</name>
+            <url>https://central.sonatype.com/api/v1/publisher/deploy</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.4.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.12.0</version>
+                <configuration>
+                    <failOnError>false</failOnError>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.2.8</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.9.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

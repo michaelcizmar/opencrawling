@@ -33,8 +33,38 @@ public class ClaimCheckProperties {
      */
     private boolean cleanupOnConsume = true;
 
+    private Lifecycle lifecycle = new Lifecycle();
     private Local local = new Local();
     private Ozone ozone = new Ozone();
+
+    public static class Lifecycle {
+        private boolean enableBackgroundGc = true;
+        private int ttlHours = 24;
+
+        public boolean isEnableBackgroundGc() {
+            return enableBackgroundGc;
+        }
+
+        public void setEnableBackgroundGc(boolean enableBackgroundGc) {
+            this.enableBackgroundGc = enableBackgroundGc;
+        }
+
+        public int getTtlHours() {
+            return ttlHours;
+        }
+
+        public void setTtlHours(int ttlHours) {
+            this.ttlHours = ttlHours;
+        }
+    }
+
+    public Lifecycle getLifecycle() {
+        return lifecycle;
+    }
+
+    public void setLifecycle(Lifecycle lifecycle) {
+        this.lifecycle = lifecycle;
+    }
 
     public static class Local {
         private String dir = "target/claims";
@@ -49,7 +79,10 @@ public class ClaimCheckProperties {
     }
 
     public static class Ozone {
+        private String clientType = "NATIVE"; // Options: "NATIVE" (ofs/RPC, default) or "S3" (s3g/HTTP)
         private String s3Endpoint = "http://localhost:9878";
+        private String omHost = "localhost";
+        private int omPort = 9862;
         private String volume = "s3v";
         private String bucket = "claims";
         private String accessKey = "ozone";
@@ -57,6 +90,30 @@ public class ClaimCheckProperties {
         private boolean pathStyleAccess = true;
         private String region = "us-east-1";
         private boolean autoCreateBucket = true;
+
+        public String getClientType() {
+            return clientType;
+        }
+
+        public void setClientType(String clientType) {
+            this.clientType = clientType;
+        }
+
+        public String getOmHost() {
+            return omHost;
+        }
+
+        public void setOmHost(String omHost) {
+            this.omHost = omHost;
+        }
+
+        public int getOmPort() {
+            return omPort;
+        }
+
+        public void setOmPort(int omPort) {
+            this.omPort = omPort;
+        }
 
         public String getS3Endpoint() {
             return s3Endpoint;

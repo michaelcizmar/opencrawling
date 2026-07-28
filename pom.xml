@@ -78,12 +78,12 @@
         </developer>
     </developers>
 
+    <url>https://github.com/opencrawling/opencrawling</url>
+
     <scm>
-        <connection>
-            scm:git:git://github.com/your-username/opencrawling.git</connection>
-        <developerConnection>
-            scm:git:ssh://github.com:your-username/opencrawling.git</developerConnection>
-        <url>https://github.com/your-username/opencrawling/tree/main</url>
+        <connection>scm:git:git://github.com/opencrawling/opencrawling.git</connection>
+        <developerConnection>scm:git:ssh://github.com:opencrawling/opencrawling.git</developerConnection>
+        <url>https://github.com/opencrawling/opencrawling/tree/main</url>
     </scm>
 
     <modules>
@@ -99,6 +99,9 @@
         <module>oc-embedding-service</module>
         <module>oc-opensearch2-output-connector</module>
         <module>oc-opensearch3-output-connector</module>
+        <module>oc-flowable-repository-connector</module>
+        <module>oc-camunda-repository-connector</module>
+        <module>oc-connector-archetypes</module>
     </modules>
 
     <properties>
@@ -285,6 +288,19 @@
             </releases>
         </pluginRepository>
     </pluginRepositories>
+
+    <distributionManagement>
+        <repository>
+            <id>central</id>
+            <name>Central Portal Repository</name>
+            <url>https://central.sonatype.com/api/v1/publisher/deploy</url>
+        </repository>
+        <snapshotRepository>
+            <id>central</id>
+            <name>Central Portal Snapshot Repository</name>
+            <url>https://central.sonatype.com/api/v1/publisher/deploy</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <profiles>
         <profile>

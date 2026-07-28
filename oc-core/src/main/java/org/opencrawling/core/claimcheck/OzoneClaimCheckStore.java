@@ -17,146 +17,92 @@ package org.opencrawling.core.claimcheck;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.InputStream;
 import java.net.URI;
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
 
 /**
- * Apache Ozone / S3 Object Storage implementation of ClaimCheckStore.
- * Connects to Apache Ozone via its S3 Gateway (s3g) endpoint or any standard S3 compatible object store.
+ * Composite Apache Ozone ClaimCheckStore implementation supporting dual client strategies:
+ * 1. S3 Gateway (`s3g` / HTTP) via AWS S3 SDK for maximum versatility & cloud compatibility.
+ * 2. Native RPC Client (`ofs` / `o3fs`) via direct Ozone RPC connection for high performance.
  */
 public class OzoneClaimCheckStore implements ClaimCheckStore {
 
     private static final Logger log = LoggerFactory.getLogger(OzoneClaimCheckStore.class);
 
-    private final AtomicBoolean bucketInitialized = new AtomicBoolean(false);
-    private final S3Client s3Client;
-    private final String bucket;
-    private final boolean autoCreateBucket;
+    private final OzoneClientStrategy primaryStrategy;
+    private final List<OzoneClientStrategy> strategies;
 
     public OzoneClaimCheckStore(ClaimCheckProperties.Ozone ozoneProps) {
-        this(createS3Client(ozoneProps), ozoneProps.getBucket(), ozoneProps.isAutoCreateBucket());
+        OzoneS3GatewayClientStrategy s3Strategy = new OzoneS3GatewayClientStrategy(ozoneProps);
+        OzoneNativeClientStrategy nativeStrategy = new OzoneNativeClientStrategy(ozoneProps);
+
+        if ("NATIVE".equalsIgnoreCase(ozoneProps.getClientType())) {
+            this.primaryStrategy = nativeStrategy;
+            log.info("OzoneClaimCheckStore configured with Primary Strategy: NATIVE (ofs/o3fs RPC)");
+        } else {
+            this.primaryStrategy = s3Strategy;
+            log.info("OzoneClaimCheckStore configured with Primary Strategy: S3 Gateway (s3/s3g HTTP)");
+        }
+
+        this.strategies = List.of(s3Strategy, nativeStrategy);
     }
 
     public OzoneClaimCheckStore(S3Client s3Client, String bucket, boolean autoCreateBucket) {
-        this.s3Client = s3Client;
-        this.bucket = bucket != null && !bucket.isBlank() ? bucket : "claims";
-        this.autoCreateBucket = autoCreateBucket;
+        OzoneS3GatewayClientStrategy s3Strategy = new OzoneS3GatewayClientStrategy(s3Client, bucket, autoCreateBucket);
+        ClaimCheckProperties.Ozone defaultProps = new ClaimCheckProperties.Ozone();
+        defaultProps.setBucket(bucket);
+        defaultProps.setClientType("NATIVE");
+        OzoneNativeClientStrategy nativeStrategy = new OzoneNativeClientStrategy(defaultProps);
+
+        this.primaryStrategy = nativeStrategy;
+        this.strategies = List.of(nativeStrategy, s3Strategy);
     }
 
-    private static S3Client createS3Client(ClaimCheckProperties.Ozone ozoneProps) {
-        S3ClientBuilder builder = S3Client.builder()
-                .region(Region.of(ozoneProps.getRegion() != null ? ozoneProps.getRegion() : "us-east-1"))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(
-                                ozoneProps.getAccessKey() != null ? ozoneProps.getAccessKey() : "ozone",
-                                ozoneProps.getSecretKey() != null ? ozoneProps.getSecretKey() : "ozone-secret"
-                        )))
-                .serviceConfiguration(S3Configuration.builder()
-                        .pathStyleAccessEnabled(ozoneProps.isPathStyleAccess())
-                        .build())
-                .overrideConfiguration(ClientOverrideConfiguration.builder()
-                        .apiCallAttemptTimeout(Duration.ofSeconds(15))
-                        .apiCallTimeout(Duration.ofSeconds(30))
-                        .build());
-
-        if (ozoneProps.getS3Endpoint() != null && !ozoneProps.getS3Endpoint().isBlank()) {
-            builder.endpointOverride(URI.create(ozoneProps.getS3Endpoint()));
-        }
-
-        return builder.build();
-    }
-
-    private void ensureBucketInitialized() {
-        if (autoCreateBucket && !bucketInitialized.get()) {
-            synchronized (this) {
-                if (!bucketInitialized.get()) {
-                    initBucket();
-                    bucketInitialized.set(true);
-                }
-            }
-        }
-    }
-
-    private void initBucket() {
-        if (s3Client == null) {
-            return;
-        }
-        try {
-            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
-            log.info("Verified Apache Ozone / S3 claim check bucket exists: {}", bucket);
-        } catch (Throwable e) {
-            log.debug("Bucket {} head check failed (Ozone S3 Gateway may be offline): {}", bucket, e.getMessage());
-            try {
-                s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
-                log.info("Created Apache Ozone / S3 claim check bucket: {}", bucket);
-            } catch (Throwable ex) {
-                log.debug("Could not auto-create bucket {}: {}", bucket, ex.getMessage());
-            }
-        }
+    public OzoneClaimCheckStore(OzoneClientStrategy primaryStrategy, List<OzoneClientStrategy> strategies) {
+        this.primaryStrategy = primaryStrategy;
+        this.strategies = strategies != null ? strategies : List.of(primaryStrategy);
     }
 
     @Override
     public URI put(String id, InputStream content, long contentLength, String contentType) throws Exception {
-        ensureBucketInitialized();
-        String safeKey = id.replaceAll("[^a-zA-Z0-9.-]", "_");
-        PutObjectRequest.Builder putBuilder = PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(safeKey);
-
-        if (contentType != null && !contentType.isBlank()) {
-            putBuilder.contentType(contentType);
-        }
-
-        RequestBody requestBody;
-        if (contentLength > 0) {
-            requestBody = RequestBody.fromInputStream(content, contentLength);
-        } else {
-            byte[] bytes = content.readAllBytes();
-            requestBody = RequestBody.fromBytes(bytes);
-        }
-
-        s3Client.putObject(putBuilder.build(), requestBody);
-
-        URI uri = URI.create("s3://" + bucket + "/" + safeKey);
-        log.info("Uploaded claim check object to Apache Ozone / S3: {}", uri);
-        return uri;
+        return primaryStrategy.put(id, content, contentLength, contentType);
     }
 
     @Override
     public InputStream get(URI claimCheckUri) throws Exception {
-        ParsedS3Uri parsed = ParsedS3Uri.parse(claimCheckUri, bucket);
-        GetObjectRequest request = GetObjectRequest.builder()
-                .bucket(parsed.bucket())
-                .key(parsed.key())
-                .build();
-        return s3Client.getObject(request);
+        for (OzoneClientStrategy strategy : strategies) {
+            if (strategy.supports(claimCheckUri)) {
+                return strategy.get(claimCheckUri);
+            }
+        }
+        return primaryStrategy.get(claimCheckUri);
     }
 
     @Override
     public void delete(URI claimCheckUri) throws Exception {
-        ParsedS3Uri parsed = ParsedS3Uri.parse(claimCheckUri, bucket);
-        DeleteObjectRequest request = DeleteObjectRequest.builder()
-                .bucket(parsed.bucket())
-                .key(parsed.key())
-                .build();
-        s3Client.deleteObject(request);
-        log.info("Deleted claim check object from Apache Ozone / S3: {}", claimCheckUri);
+        for (OzoneClientStrategy strategy : strategies) {
+            if (strategy.supports(claimCheckUri)) {
+                strategy.delete(claimCheckUri);
+                return;
+            }
+        }
+        primaryStrategy.delete(claimCheckUri);
+    }
+
+    @Override
+    public int deleteExpired(java.time.Duration maxAge) throws Exception {
+        int total = 0;
+        for (OzoneClientStrategy strategy : strategies) {
+            try {
+                total += strategy.deleteExpired(maxAge);
+            } catch (Exception e) {
+                log.warn("Failed deleteExpired sweep for strategy {}: {}", strategy.getClass().getSimpleName(), e.getMessage());
+            }
+        }
+        return total;
     }
 
     @Override
@@ -164,24 +110,10 @@ public class OzoneClaimCheckStore implements ClaimCheckStore {
         if (claimCheckUri == null) {
             return false;
         }
-        String scheme = claimCheckUri.getScheme();
-        return "s3".equalsIgnoreCase(scheme) || "ofs".equalsIgnoreCase(scheme);
+        return strategies.stream().anyMatch(s -> s.supports(claimCheckUri));
     }
 
-    private record ParsedS3Uri(String bucket, String key) {
-        static ParsedS3Uri parse(URI uri, String defaultBucket) {
-            if (uri == null) {
-                throw new IllegalArgumentException("Claim check URI cannot be null");
-            }
-            String host = uri.getHost();
-            String path = uri.getPath();
-
-            String bucket = (host != null && !host.isBlank()) ? host : defaultBucket;
-            String key = (path != null && path.length() > 1) ? path.substring(1) : path;
-            if (key != null && key.startsWith("/")) {
-                key = key.substring(1);
-            }
-            return new ParsedS3Uri(bucket, key);
-        }
+    public OzoneClientStrategy getPrimaryStrategy() {
+        return primaryStrategy;
     }
 }
