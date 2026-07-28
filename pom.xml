@@ -124,6 +124,7 @@
         <aws-sdk.version>2.30.34</aws-sdk.version>
         <docker-maven-plugin.version>0.48.1</docker-maven-plugin.version>
         <skipITs>true</skipITs>
+        <gpg.skip>true</gpg.skip>
     </properties>
 
     <dependencyManagement>

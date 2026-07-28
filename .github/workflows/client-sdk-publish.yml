@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v5.6.0
+        uses: actions/setup-java@v4
         with:
           java-version: '25'
           distribution: 'temurin'
@@ -48,6 +48,8 @@ jobs:
           server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
 
       - name: Set Release Version (if specified)
         run: |
@@ -65,6 +67,7 @@ jobs:
         run: |
           mvn clean deploy -pl oc-java-client-sdk -DskipTests \
             -DaltDeploymentRepository=central::default::https://central.sonatype.com/api/v1/publisher/deploy \
+            -Dgpg.skip=false \
             -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}

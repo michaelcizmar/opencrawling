@@ -185,10 +185,21 @@ The workflow will:
 
 ### Local Maven Installation
 
-For local development and testing across sibling projects:
+For local development and testing across sibling projects (GPG artifact signing is skipped by default):
 
 ```bash
 mvn clean install -pl oc-java-client-sdk -am
+```
+
+### Manual Release Deployment (Enabling GPG Signing)
+
+GPG signing execution is skipped by default (`<gpg.skip>true</gpg.skip>`) so local builds don't require local GPG keys. When deploying a formal release to Maven Central, pass `-Dgpg.skip=false`:
+
+```bash
+mvn clean deploy -pl oc-java-client-sdk -DskipTests \
+  -DaltDeploymentRepository=central::default::https://central.sonatype.com/api/v1/publisher/deploy \
+  -Dgpg.skip=false \
+  -Dgpg.passphrase="YOUR_GPG_PASSPHRASE"
 ```
 
 ---

@@ -48,6 +48,8 @@ jobs:
           server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
 
       - name: Set Release Version (if specified)
         run: |
@@ -68,6 +70,7 @@ jobs:
           cd oc-connector-archetypes
           mvn clean deploy -DskipTests \
             -DaltDeploymentRepository=central::default::https://central.sonatype.com/api/v1/publisher/deploy \
+            -Dgpg.skip=false \
             -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
