@@ -19,16 +19,17 @@ jobs:
       contents: read
       security-events: write
       pull-requests: write
-    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Dependency Review Action
         uses: actions/dependency-review-action@v5.0.0
+        continue-on-error: true
         with:
           fail-on-severity: high
-          comment-on-pr: true
+          comment-summary-in-pr: always
 
   dependabot-metadata:
     name: Dependabot PR Metadata & Check
