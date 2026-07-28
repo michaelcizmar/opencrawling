@@ -17,6 +17,7 @@
 [![Camunda](https://img.shields.io/badge/Camunda_BPM-Supported-E10076.svg?style=flat&logo=camunda&logoColor=white)](https://camunda.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17+-blue.svg?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Milvus](https://img.shields.io/badge/Milvus-2.4.5-00A1EA.svg?style=flat&logo=milvus&logoColor=white)](https://milvus.io/)
+[![Qdrant](https://img.shields.io/badge/Qdrant-1.12-DC244C.svg?style=flat&logo=qdrant&logoColor=white)](https://qdrant.tech/)
 [![OpenSearch](https://img.shields.io/badge/OpenSearch-2.x%20%7C%203.x-005EB8.svg?style=flat&logo=opensearch&logoColor=white)](https://opensearch.org/)
 [![Redis](https://img.shields.io/badge/Redis-Supported-red.svg?style=flat&logo=redis&logoColor=white)](https://redis.io/)
 [![Ollama](https://img.shields.io/badge/Ollama-0.23.4-white.svg?style=flat&logo=ollama&logoColor=black)](https://ollama.com/)
@@ -392,6 +393,7 @@ docker compose -f docker/docker-compose.dist.yml -f docker/docker-compose.overri
 - **Repository Connectors**: Multi-source connectors for Filesystem, Alfresco Content Services (ACS), Apache Iceberg, and **Flowable BPMN** engine (historic process instances & BPMN variable ingestion).
 - **pgvector**: High-dimensional vector similarity search in PostgreSQL.
 - **Milvus**: High-performance, distributed vector database for large-scale enterprise vector indexing.
+- **Qdrant**: Rust-based vector search engine with payload-indexed ACL pre-filtering and optional scalar/binary quantization.
 - **Redis Stack**: Lightweight caching and session management.
 - **Ollama & OpenAI**: Dynamic embedding generation via local and cloud-based AI engines.
 - **Vite + React + TailwindCSS**: Modern frontend administration dashboard with interactive AIOps diagnostic panels.
@@ -572,6 +574,24 @@ To run the complete decoupled pipeline configured to use Milvus instead of Postg
    ```
 
 This starts the etcd, MinIO, and Milvus Standalone infrastructure alongside the decoupled OpenCrawling services. 
+
+---
+
+### Option A.5: Decoupled Qdrant-Based Deployment
+
+To run the complete decoupled pipeline configured to use Qdrant instead of PostgreSQL/pgvector:
+
+1. **Build the Qdrant decoupled stack**:
+   ```bash
+   docker compose -f oc-qdrant-output-connector/docker/docker-compose-decoupled-with-qdrant.yml build
+   ```
+
+2. **Start the Qdrant decoupled pipeline**:
+   ```bash
+   docker compose -f oc-qdrant-output-connector/docker/docker-compose-decoupled-with-qdrant.yml up -d
+   ```
+
+This starts a standalone Qdrant instance alongside the decoupled OpenCrawling services. Key configuration properties (see `spring.opencrawling.output.qdrant.*`): `host`, `port` (gRPC, default `6334`), `api-key` (for Qdrant Cloud), `collection-name`, `dimensions`, `distance` (`COSINE` | `DOT` | `EUCLID`), `quantization` (`NONE` | `SCALAR_INT8` | `BINARY`), `use-tls`, and `batch-size`. ACL pre-filtering works the same way as with pgvector/Milvus: `security_allowed_read`/`security_denied_read` keyword payload indexes are auto-provisioned on the collection at startup.
 
 ---
 

@@ -95,6 +95,7 @@
         <module>oc-iceberg-repository-connector</module>
         <module>oc-vector-output-connector</module>
         <module>oc-milvus-output-connector</module>
+        <module>oc-qdrant-output-connector</module>
         <module>oc-admin-ui</module>
         <module>oc-embedding-service</module>
         <module>oc-opensearch2-output-connector</module>
