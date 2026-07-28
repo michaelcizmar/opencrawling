@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v4
 
       - name: Set up JDK 25
         uses: actions/setup-java@v4
@@ -56,7 +56,9 @@ jobs:
           RELEASE_VER="${{ inputs.release_version }}"
           if [ -n "$RELEASE_VER" ]; then
             echo "Setting release version to $RELEASE_VER"
-            mvn versions:set -DnewVersion=$RELEASE_VER -pl oc-java-client-sdk -DgenerateBackupPoms=false
+            cd oc-java-client-sdk
+            mvn versions:set -DnewVersion=$RELEASE_VER -DgenerateBackupPoms=false
+            cd ..
           fi
 
       - name: Build Core Dependencies
@@ -65,7 +67,8 @@ jobs:
 
       - name: Deploy Java Client SDK via Sonatype Central Publishing Plugin
         run: |
-          mvn clean deploy -pl oc-java-client-sdk -DskipTests \
+          cd oc-java-client-sdk
+          mvn clean deploy -DskipTests \
             -Dgpg.skip=false \
             -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
         env:
