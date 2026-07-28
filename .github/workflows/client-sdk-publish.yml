@@ -63,10 +63,9 @@ jobs:
         run: |
           mvn clean install -DskipTests -pl oc-core -am
 
-      - name: Deploy Java Client SDK to Maven Central
+      - name: Deploy Java Client SDK via Sonatype Central Publishing Plugin
         run: |
           mvn clean deploy -pl oc-java-client-sdk -DskipTests \
-            -DaltDeploymentRepository=central::default::https://central.sonatype.com/api/v1/publisher/deploy \
             -Dgpg.skip=false \
             -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
         env:

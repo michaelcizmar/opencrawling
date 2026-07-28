@@ -69,7 +69,6 @@ jobs:
         run: |
           cd oc-connector-archetypes
           mvn clean deploy -DskipTests \
-            -DaltDeploymentRepository=central::default::https://central.sonatype.com/api/v1/publisher/deploy \
             -Dgpg.skip=false \
             -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
         env:
