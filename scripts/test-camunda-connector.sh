@@ -30,7 +30,7 @@ cd "$SCRIPT_DIR/.."
 
 command -v docker >/dev/null 2>&1 || { echo -e "${RED}Docker is required but not installed. Aborting.${NC}" >&2; exit 1; }
 
-CONTAINER_NAME="opencrawling-camunda-8-test"
+CONTAINER_NAME="opencrawling-camunda-7-test"
 CAMUNDA_PORT=8089
 
 cleanup() {

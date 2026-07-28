@@ -14,28 +14,28 @@
 # limitations under the License.
 #
 
-name: Publish Maven Archetypes to Maven Central
+name: Publish Java SDK to Maven Central
 
 on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Release version for archetypes (e.g. 1.0.0)'
+        description: 'Release version for oc-java-client-sdk (e.g. 1.0.0)'
         required: false
         default: '1.0.0'
 
 permissions: read-all
 
 jobs:
-  publish-archetypes:
-    name: Build & Publish Connector Archetypes
+  publish-sdk:
+    name: Build & Publish Java Client SDK
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Set up JDK 25
         uses: actions/setup-java@v4
@@ -56,19 +56,16 @@ jobs:
           RELEASE_VER="${{ inputs.release_version }}"
           if [ -n "$RELEASE_VER" ]; then
             echo "Setting release version to $RELEASE_VER"
-            cd oc-connector-archetypes
-            mvn versions:set -DnewVersion=$RELEASE_VER -DprocessParents=true -DgenerateBackupPoms=false
-            cd ..
+            mvn versions:set -DnewVersion=$RELEASE_VER -pl oc-java-client-sdk -DgenerateBackupPoms=false
           fi
 
       - name: Build Core Dependencies
         run: |
-          mvn clean install -DskipTests -pl oc-core,oc-observability -am
+          mvn clean install -DskipTests -pl oc-core -am
 
-      - name: Deploy Archetypes via Sonatype Central Publishing Plugin
+      - name: Deploy Java Client SDK to Maven Central
         run: |
-          cd oc-connector-archetypes
-          mvn clean deploy -DskipTests \
+          mvn clean deploy -pl oc-java-client-sdk -DskipTests \
             -DaltDeploymentRepository=central::default::https://central.sonatype.com/api/v1/publisher/deploy \
             -Dgpg.skip=false \
             -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"

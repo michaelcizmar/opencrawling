@@ -102,6 +102,7 @@
         <module>oc-flowable-repository-connector</module>
         <module>oc-camunda-repository-connector</module>
         <module>oc-connector-archetypes</module>
+        <module>oc-java-client-sdk</module>
     </modules>
 
     <properties>
@@ -123,6 +124,7 @@
         <aws-sdk.version>2.30.34</aws-sdk.version>
         <docker-maven-plugin.version>0.48.1</docker-maven-plugin.version>
         <skipITs>true</skipITs>
+        <gpg.skip>true</gpg.skip>
     </properties>
 
     <dependencyManagement>

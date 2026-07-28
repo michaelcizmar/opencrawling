@@ -38,9 +38,10 @@ COPY oc-connector-archetypes/pom.xml oc-connector-archetypes/
 COPY oc-connector-archetypes/opencrawling-archetype-repository-connector/pom.xml oc-connector-archetypes/opencrawling-archetype-repository-connector/
 COPY oc-connector-archetypes/opencrawling-archetype-output-connector/pom.xml oc-connector-archetypes/opencrawling-archetype-output-connector/
 COPY oc-connector-archetypes/opencrawling-archetype-transformation-connector/pom.xml oc-connector-archetypes/opencrawling-archetype-transformation-connector/
+COPY oc-java-client-sdk/pom.xml oc-java-client-sdk/
 
 # Download maven dependencies first (saves time on rebuilds if code changes but dependencies do not)
-RUN mvn dependency:go-offline -B -DexcludeArtifactIds=oc-core,oc-observability,oc-filesystem-repository-connector,oc-alfresco-repository-connector,oc-iceberg-repository-connector,oc-flowable-repository-connector,oc-camunda-repository-connector,oc-vector-output-connector,oc-milvus-output-connector,oc-admin-ui,oc-runtime,oc-embedding-service,oc-opensearch2-output-connector,oc-opensearch3-output-connector,opencrawling-connector-archetypes,opencrawling-archetype-repository-connector,opencrawling-archetype-output-connector,opencrawling-archetype-transformation-connector
+RUN mvn dependency:go-offline -B -DexcludeArtifactIds=oc-core,oc-observability,oc-filesystem-repository-connector,oc-alfresco-repository-connector,oc-iceberg-repository-connector,oc-flowable-repository-connector,oc-camunda-repository-connector,oc-vector-output-connector,oc-milvus-output-connector,oc-admin-ui,oc-runtime,oc-embedding-service,oc-opensearch2-output-connector,oc-opensearch3-output-connector,opencrawling-connector-archetypes,opencrawling-archetype-repository-connector,opencrawling-archetype-output-connector,opencrawling-archetype-transformation-connector,oc-java-client-sdk
 
 # Copy all source files
 COPY oc-core/src/ /app/oc-core/src/
@@ -56,6 +57,7 @@ COPY oc-opensearch2-output-connector/src/ /app/oc-opensearch2-output-connector/s
 COPY oc-opensearch3-output-connector/src/ /app/oc-opensearch3-output-connector/src/
 COPY oc-embedding-service/src/ /app/oc-embedding-service/src/
 COPY oc-connector-archetypes/ /app/oc-connector-archetypes/
+COPY oc-java-client-sdk/src/ /app/oc-java-client-sdk/src/
 
 # Copy frontend source files (needed by frontend-maven-plugin in oc-admin-ui)
 COPY oc-admin-ui/src/ /app/oc-admin-ui/src/
