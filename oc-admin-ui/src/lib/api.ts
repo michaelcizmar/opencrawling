@@ -53,6 +53,7 @@ export const connectorApi = {
   getAll: (type: string) => api.get(`/connectors/${type}`),
   create: (data: any) => api.post('/connectors', data),
   delete: (id: string) => api.delete(`/connectors/${id}`),
+  checkConnection: (data: any) => api.post('/connectors/check', data),
 }
 
 export const statusApi = {

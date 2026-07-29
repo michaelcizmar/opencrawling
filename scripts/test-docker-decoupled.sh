@@ -207,13 +207,22 @@ fi
 # Verify MCP server endpoint
 # The runtime uses STREAMABLE_HTTP transport, so the health endpoint is POST /mcp
 # We verify with a lightweight GET to / (the actuator/health or root) that the server is up
-echo -e "${YELLOW}Verifying MCP Server health endpoint...${NC}"
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080/mcp || \
-              curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080/ || true)
+echo -e "${YELLOW}Waiting for MCP Server health endpoint to be ready...${NC}"
+HTTP_STATUS="000"
+ELAPSED=0
+TIMEOUT=60
+until [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "405" ] || [ "$HTTP_STATUS" == "404" ] || [ $ELAPSED -ge $TIMEOUT ]; do
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080/mcp 2>/dev/null || echo "")
+  if [ -z "$HTTP_STATUS" ] || [ "$HTTP_STATUS" == "000" ]; then
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080/ 2>/dev/null || echo "000")
+  fi
+  if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "405" ] && [ "$HTTP_STATUS" != "404" ]; then
+    sleep 2
+    ELAPSED=$((ELAPSED + 2))
+  fi
+done
 echo -e "MCP Server HTTP Status: ${GREEN}$HTTP_STATUS${NC}"
 
-# Accept both 200 (OK) and 405 (Method Not Allowed) — 405 means the server is up
-# but requires a POST body for the MCP Streamable HTTP endpoint
 if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "405" ] && [ "$HTTP_STATUS" != "404" ]; then
   echo -e "${RED}Decoupled integration test failed: MCP Server returned unexpected status $HTTP_STATUS${NC}"
   compose logs oc-mcp-server

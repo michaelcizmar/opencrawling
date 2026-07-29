@@ -1,5 +1,5 @@
 /*
- * Copyright © ${year} the original author or authors (piergiorgio@apache.org)
+ * Copyright © 2026 the original author or authors (piergiorgio@apache.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package org.opencrawling.sdk;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.opencrawling.sdk.http.HttpTransport;
+import org.opencrawling.sdk.models.ConnectionCheckResponse;
 import org.opencrawling.sdk.models.ConnectorRequest;
 import org.opencrawling.sdk.models.ConnectorResponse;
 
@@ -42,6 +43,11 @@ public class DefaultConnectorClient implements ConnectorClient {
     @Override
     public void create(ConnectorRequest request) {
         transport.executeVoid("POST", "/api/connectors", request);
+    }
+
+    @Override
+    public ConnectionCheckResponse checkConnection(ConnectorRequest request) {
+        return transport.execute("POST", "/api/connectors/check", request, ConnectionCheckResponse.class);
     }
 
     @Override

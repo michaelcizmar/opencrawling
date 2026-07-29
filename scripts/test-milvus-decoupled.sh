@@ -187,9 +187,20 @@ if [ "$RECORD_COUNT" -eq 0 ] || [ "$RECORD_COUNT" == "failed" ]; then
 fi
 
 # Verify MCP server endpoint
-echo -e "${YELLOW}Verifying MCP Server health endpoint...${NC}"
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080/mcp || \
-              curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080/ || true)
+echo -e "${YELLOW}Waiting for MCP Server health endpoint to be ready...${NC}"
+HTTP_STATUS="000"
+ELAPSED=0
+TIMEOUT=60
+until [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "405" ] || [ "$HTTP_STATUS" == "404" ] || [ $ELAPSED -ge $TIMEOUT ]; do
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080/mcp 2>/dev/null || echo "")
+  if [ -z "$HTTP_STATUS" ] || [ "$HTTP_STATUS" == "000" ]; then
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8080/ 2>/dev/null || echo "000")
+  fi
+  if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "405" ] && [ "$HTTP_STATUS" != "404" ]; then
+    sleep 2
+    ELAPSED=$((ELAPSED + 2))
+  fi
+done
 echo -e "MCP Server HTTP Status: ${GREEN}$HTTP_STATUS${NC}"
 
 if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "405" ] && [ "$HTTP_STATUS" != "404" ]; then

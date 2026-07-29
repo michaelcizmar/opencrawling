@@ -1,0 +1,266 @@
+#
+# Copyright © 2026 the original author or authors (piergiorgio@apache.org)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+services:
+  # --- Flowable BPMN REST Engine ---
+  flowable:
+    image: flowable/flowable-rest:7.1.0
+    container_name: flowable-rest-decoupled
+    ports:
+      - "8088:8080"
+    environment:
+      - FLOWABLE_REST_APP_ADMIN_USER-ID=rest-admin
+      - FLOWABLE_REST_APP_ADMIN_PASSWORD=test
+    volumes:
+      - opencrawling-flowabledata:/flowable-db
+    networks:
+      - opencrawling-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://rest-admin:test@localhost:8080/flowable-rest/service/management/engine || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Vector Store (PostgreSQL / pgvector) ---
+  postgres-vector:
+    image: pgvector/pgvector:pg17
+    container_name: postgres-vector-decoupled-flowable
+    environment:
+      POSTGRES_DB: opencrawling
+      POSTGRES_USER: opencrawling
+      POSTGRES_PASSWORD: opencrawling_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - opencrawling-pgdata-flowable:/var/lib/postgresql/data
+    networks:
+      - opencrawling-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opencrawling -d opencrawling"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis/redis-stack:7.4.0-v8
+    container_name: redis-stack-decoupled-flowable
+    environment:
+      REDIS_ARGS: "--requirepass redis_password"
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - opencrawling-redisdata-flowable:/data
+    networks:
+      - opencrawling-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:0.23.4
+    container_name: ollama-decoupled-flowable
+    ports:
+      - "11434:11434"
+    volumes:
+      - opencrawling-ollamadata:/root/.ollama
+    networks:
+      - opencrawling-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ollama-model-puller:
+    image: ollama/ollama:0.23.4
+    container_name: ollama-model-puller-decoupled-flowable
+    entrypoint: ["/bin/sh", "-c", "ollama pull mxbai-embed-large && ollama pull nomic-embed-text"]
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    networks:
+      - opencrawling-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka-decoupled-flowable
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:9094,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka:9094,EXTERNAL://127.0.0.1:9092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+    ports:
+      - "9092:9092"
+    volumes:
+      - opencrawling-kafkadata-flowable:/var/lib/kafka/data
+    networks:
+      - opencrawling-network
+
+  # --- Decoupled OpenCrawling Services ---
+  oc-crawler:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.crawler
+    image: ghcr.io/opencrawling/oc-crawler:latest
+    container_name: oc-crawler-service-flowable
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - OPENCRAWLING_CONNECTOR_TYPE=flowable
+      - SPRING_OPENCRAWLING_CONNECTOR_FLOWABLE_ENABLED=true
+      - SPRING_OPENCRAWLING_CONNECTOR_FLOWABLE_ENDPOINT=http://flowable:8080/flowable-rest/service
+      - SPRING_OPENCRAWLING_CONNECTOR_FLOWABLE_USERNAME=rest-admin
+      - SPRING_OPENCRAWLING_CONNECTOR_FLOWABLE_PASSWORD=test
+      - SPRING_OPENCRAWLING_CONNECTOR_FLOWABLE_SCAN_HISTORY=true
+      - SPRING_OPENCRAWLING_CONNECTOR_FLOWABLE_INCLUDE_PROCESS_VARIABLES=true
+      - SPRING_OPENCRAWLING_CRAWL_ON_STARTUP=true
+      - SPRING_MAIN_WEB_APPLICATION_TYPE=none
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
+    depends_on:
+      - kafka
+      - flowable
+      - postgres-vector
+    networks:
+      - opencrawling-network
+    restart: on-failure
+
+  oc-ingestion-consumer:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.ingestion-consumer
+    image: ghcr.io/opencrawling/oc-ingestion-consumer:latest
+    container_name: oc-ingestion-consumer-service-flowable
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
+    depends_on:
+      - kafka
+      - postgres-vector
+    networks:
+      - opencrawling-network
+    restart: unless-stopped
+
+  oc-embedding-consumer:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.embedding-consumer
+    image: ghcr.io/opencrawling/oc-embedding-consumer:latest
+    container_name: oc-embedding-consumer-service-flowable
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - SPRING_AI_OLLAMA_BASE_URL=http://ollama:11434
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
+    depends_on:
+      - kafka
+      - ollama
+      - postgres-vector
+    networks:
+      - opencrawling-network
+    restart: unless-stopped
+
+  oc-writer-consumer:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.writer-consumer
+    image: ghcr.io/opencrawling/oc-writer-consumer:latest
+    container_name: oc-writer-service-flowable
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
+    depends_on:
+      - kafka
+      - postgres-vector
+    networks:
+      - opencrawling-network
+    restart: unless-stopped
+
+  oc-mcp-server:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.mcp-server
+    image: ghcr.io/opencrawling/oc-mcp-server:latest
+    container_name: oc-mcp-server-service-flowable
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PASSWORD=redis_password
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
+    depends_on:
+      - redis
+      - postgres-vector
+    networks:
+      opencrawling-network:
+        aliases:
+          - opencrawling-backend
+    restart: unless-stopped
+
+networks:
+  opencrawling-network:
+    name: opencrawling-network
+    driver: bridge
+
+volumes:
+  opencrawling-pgdata-flowable:
+    name: opencrawling-pgdata-flowable
+  opencrawling-redisdata-flowable:
+    name: opencrawling-redisdata-flowable
+  opencrawling-ollamadata:
+    name: opencrawling-ollamadata
+  opencrawling-kafkadata-flowable:
+    name: opencrawling-kafkadata-flowable
+  opencrawling-flowabledata:
+    name: opencrawling-flowabledata

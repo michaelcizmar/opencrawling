@@ -1,5 +1,5 @@
 /*
- * Copyright © ${year} the original author or authors (piergiorgio@apache.org)
+ * Copyright © 2026 the original author or authors (piergiorgio@apache.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package org.opencrawling.sdk;
 
+import org.opencrawling.sdk.models.ConnectionCheckResponse;
 import org.opencrawling.sdk.models.ConnectorRequest;
 import org.opencrawling.sdk.models.ConnectorResponse;
 
@@ -34,6 +35,11 @@ public interface ConnectorClient {
      * Creates or updates a connector configuration.
      */
     void create(ConnectorRequest request);
+
+    /**
+     * Checks connection consistency and reliability for a given connector configuration.
+     */
+    ConnectionCheckResponse checkConnection(ConnectorRequest request);
 
     /**
      * Deletes a connector configuration by name/id.

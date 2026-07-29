@@ -37,6 +37,8 @@ services:
     ports:
       - "9200:9200"
       - "9600:9600"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
     networks:
       - opencrawling-network
     healthcheck:
@@ -69,7 +71,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - opencrawling-ollamadata-opensearch:/root/.ollama
+      - opencrawling-ollamadata:/root/.ollama
     networks:
       - opencrawling-network
     healthcheck:
@@ -298,9 +300,11 @@ networks:
     driver: bridge
 
 volumes:
+  opensearch-data:
+    name: opensearch-data
   opencrawling-redisdata-opensearch:
     name: opencrawling-redisdata-opensearch
-  opencrawling-ollamadata-opensearch:
-    name: opencrawling-ollamadata-opensearch
+  opencrawling-ollamadata:
+    name: opencrawling-ollamadata
   opencrawling-kafkadata-opensearch:
     name: opencrawling-kafkadata-opensearch

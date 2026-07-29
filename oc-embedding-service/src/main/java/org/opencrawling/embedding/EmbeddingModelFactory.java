@@ -51,7 +51,13 @@ public class EmbeddingModelFactory {
             log.info("Creating dynamic embedding client for engine: {} with model: {}", engineType, modelName);
             switch (engineType.toLowerCase()) {
                 case "ollama":
-                    String baseUrl = config != null ? config.getOrDefault("baseUrl", ollamaBaseUrl) : ollamaBaseUrl;
+                    String baseUrl = config != null ? config.getOrDefault("baseUrl", config.getOrDefault("url", ollamaBaseUrl)) : ollamaBaseUrl;
+                    if (baseUrl == null || baseUrl.isBlank() || baseUrl.contains("localhost") || baseUrl.contains("127.0.0.1")) {
+                        if (ollamaBaseUrl != null && !ollamaBaseUrl.isBlank() && !ollamaBaseUrl.contains("localhost")) {
+                            baseUrl = ollamaBaseUrl;
+                        }
+                    }
+                    log.info("Connecting Ollama embedding client to baseUrl: {}", baseUrl);
                     var ollamaApi = org.springframework.ai.ollama.api.OllamaApi.builder()
                         .baseUrl(baseUrl)
                         .build();

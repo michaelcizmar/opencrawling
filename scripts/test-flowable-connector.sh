@@ -48,7 +48,7 @@ cleanup
 echo -e "${YELLOW}Starting Flowable REST container (${CONTAINER_NAME})...${NC}"
 docker run -d --name "$CONTAINER_NAME" \
   -p ${FLOWABLE_PORT}:8080 \
-  flowable/flowable-rest:latest
+  flowable/flowable-rest:7.1.0
 
 echo -e "${YELLOW}Waiting for Flowable REST service to be healthy at http://localhost:${FLOWABLE_PORT}/flowable-rest/service ...${NC}"
 

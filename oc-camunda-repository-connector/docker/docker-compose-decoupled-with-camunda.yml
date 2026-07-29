@@ -1,5 +1,5 @@
 #
-# Copyright © 2026 the original author or authors (michael@michaelcizmar.com)
+# Copyright © 2026 the original author or authors (piergiorgio@apache.org)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,33 +15,55 @@
 #
 
 services:
-  # --- Qdrant Vector Database ---
-  qdrant:
-    container_name: qdrant-standalone
-    image: qdrant/qdrant:v1.18.3
+  # --- Camunda Platform 7 BPMN Engine ---
+  camunda:
+    image: camunda/camunda-bpm-platform:7.23.0
+    container_name: camunda-7-decoupled
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - "8089:8080"
+    environment:
+      - CAMUNDA_BPM_ADMIN_USER_ID=demo
+      - CAMUNDA_BPM_ADMIN_USER_PASSWORD=demo
     volumes:
-      - qdrant-data:/qdrant/storage
+      - opencrawling-camundadata:/camunda/data
     networks:
       - opencrawling-network
     healthcheck:
-      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/engine-rest/version || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # --- Vector Store (PostgreSQL / pgvector) ---
+  postgres-vector:
+    image: pgvector/pgvector:pg17
+    container_name: postgres-vector-decoupled-camunda
+    environment:
+      POSTGRES_DB: opencrawling
+      POSTGRES_USER: opencrawling
+      POSTGRES_PASSWORD: opencrawling_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - opencrawling-pgdata-camunda:/var/lib/postgresql/data
+    networks:
+      - opencrawling-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opencrawling -d opencrawling"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   redis:
     image: redis/redis-stack:7.4.0-v8
-    container_name: redis-stack-decoupled-qdrant
+    container_name: redis-stack-decoupled-camunda
     environment:
       REDIS_ARGS: "--requirepass redis_password"
     ports:
       - "6379:6379"
       - "8001:8001"
     volumes:
-      - opencrawling-redisdata-qdrant:/data
+      - opencrawling-redisdata-camunda:/data
     networks:
       - opencrawling-network
     healthcheck:
@@ -52,7 +74,7 @@ services:
 
   ollama:
     image: ollama/ollama:0.23.4
-    container_name: ollama-decoupled-qdrant
+    container_name: ollama-decoupled-camunda
     ports:
       - "11434:11434"
     volumes:
@@ -67,8 +89,8 @@ services:
 
   ollama-model-puller:
     image: ollama/ollama:0.23.4
-    container_name: ollama-model-puller-decoupled-qdrant
-    entrypoint: ["/bin/sh", "-c", "ollama pull mxbai-embed-large && ollama pull nomic-embed-text && ollama pull all-minilm && ollama pull llama3.2"]
+    container_name: ollama-model-puller-decoupled-camunda
+    entrypoint: ["/bin/sh", "-c", "ollama pull mxbai-embed-large && ollama pull nomic-embed-text"]
     environment:
       - OLLAMA_HOST=ollama:11434
     networks:
@@ -79,7 +101,7 @@ services:
 
   kafka:
     image: apache/kafka:3.7.0
-    container_name: kafka-decoupled-qdrant
+    container_name: kafka-decoupled-camunda
     environment:
       KAFKA_NODE_ID: "1"
       KAFKA_PROCESS_ROLES: 'broker,controller'
@@ -96,61 +118,7 @@ services:
     ports:
       - "9092:9092"
     volumes:
-      - opencrawling-kafkadata-qdrant:/var/lib/kafka/data
-    networks:
-      - opencrawling-network
-
-  # --- Apache Ozone Object Storage (Claim Check Store) ---
-  ozone-scm:
-    image: apache/ozone:2.2.0
-    container_name: ozone-scm-qdrant
-    hostname: scm
-    environment:
-      OZONE-SITE.XML_ozone.scm.client.address: scm
-      OZONE-SITE.XML_ozone.om.address: om
-    command: ["ozone", "scm"]
-    networks:
-      - opencrawling-network
-
-  ozone-om:
-    image: apache/ozone:2.2.0
-    container_name: ozone-om-qdrant
-    hostname: om
-    environment:
-      OZONE-SITE.XML_ozone.scm.client.address: scm
-      OZONE-SITE.XML_ozone.om.address: om
-    command: ["ozone", "om"]
-    depends_on:
-      - ozone-scm
-    networks:
-      - opencrawling-network
-
-  ozone-datanode:
-    image: apache/ozone:2.2.0
-    container_name: ozone-datanode-qdrant
-    environment:
-      OZONE-SITE.XML_ozone.scm.client.address: scm
-      OZONE-SITE.XML_ozone.om.address: om
-    command: ["ozone", "datanode"]
-    depends_on:
-      - ozone-scm
-      - ozone-om
-    networks:
-      - opencrawling-network
-
-  ozone-s3g:
-    image: apache/ozone:2.2.0
-    container_name: ozone-s3g-qdrant
-    hostname: s3g
-    ports:
-      - "9878:9878"
-    environment:
-      OZONE-SITE.XML_ozone.scm.client.address: scm
-      OZONE-SITE.XML_ozone.om.address: om
-    command: ["ozone", "s3g"]
-    depends_on:
-      - ozone-scm
-      - ozone-om
+      - opencrawling-kafkadata-camunda:/var/lib/kafka/data
     networks:
       - opencrawling-network
 
@@ -160,19 +128,27 @@ services:
       context: ../../
       dockerfile: docker/Dockerfile.crawler
     image: ghcr.io/opencrawling/oc-crawler:latest
-    container_name: oc-crawler-service-qdrant
+    container_name: oc-crawler-service-camunda
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - OPENCRAWLING_CONNECTOR_TYPE=camunda
+      - SPRING_OPENCRAWLING_CONNECTOR_CAMUNDA_ENABLED=true
+      - SPRING_OPENCRAWLING_CONNECTOR_CAMUNDA_URL=http://camunda:8080/engine-rest
+      - SPRING_OPENCRAWLING_CONNECTOR_CAMUNDA_USERNAME=demo
+      - SPRING_OPENCRAWLING_CONNECTOR_CAMUNDA_PASSWORD=demo
+      - SPRING_OPENCRAWLING_CONNECTOR_CAMUNDA_SCAN_HISTORIC_PROCESS_INSTANCES=true
       - SPRING_OPENCRAWLING_CRAWL_ON_STARTUP=true
-      - SPRING_OPENCRAWLING_SCAN_PATH=/data
       - SPRING_MAIN_WEB_APPLICATION_TYPE=none
-      - SPRING_OPENCRAWLING_OUTPUT_TYPE=qdrant
-      - SPRING_OPENCRAWLING_OUTPUT_QDRANT_HOST=qdrant
-      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
-    volumes:
-      - ../../oc-runtime/data:/data  # Mount sample files directory
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
     depends_on:
       - kafka
+      - camunda
+      - postgres-vector
     networks:
       - opencrawling-network
     restart: on-failure
@@ -182,16 +158,18 @@ services:
       context: ../../
       dockerfile: docker/Dockerfile.ingestion-consumer
     image: ghcr.io/opencrawling/oc-ingestion-consumer:latest
-    container_name: oc-ingestion-consumer-service-qdrant
+    container_name: oc-ingestion-consumer-service-camunda
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
-      - SPRING_OPENCRAWLING_OUTPUT_TYPE=qdrant
-      - SPRING_OPENCRAWLING_OUTPUT_QDRANT_HOST=qdrant
-      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
-    volumes:
-      - ../../oc-runtime/data:/data  # Needs access to resolve local claim check file URIs
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
     depends_on:
       - kafka
+      - postgres-vector
     networks:
       - opencrawling-network
     restart: unless-stopped
@@ -201,19 +179,22 @@ services:
       context: ../../
       dockerfile: docker/Dockerfile.embedding-consumer
     image: ghcr.io/opencrawling/oc-embedding-consumer:latest
-    container_name: oc-embedding-consumer-service-qdrant
+    container_name: oc-embedding-consumer-service-camunda
     ports:
       - "8082:8082"
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
       - SPRING_AI_OLLAMA_BASE_URL=http://ollama:11434
-      - SPRING_AI_OPENAI_API_KEY=mock-key
-      - SPRING_OPENCRAWLING_OUTPUT_TYPE=qdrant
-      - SPRING_OPENCRAWLING_OUTPUT_QDRANT_HOST=qdrant
-      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
     depends_on:
       - kafka
       - ollama
+      - postgres-vector
     networks:
       - opencrawling-network
     restart: unless-stopped
@@ -223,17 +204,18 @@ services:
       context: ../../
       dockerfile: docker/Dockerfile.writer-consumer
     image: ghcr.io/opencrawling/oc-writer-consumer:latest
-    container_name: oc-writer-service-qdrant
+    container_name: oc-writer-service-camunda
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
-      - SPRING_OPENCRAWLING_OUTPUT_TYPE=qdrant
-      - SPRING_OPENCRAWLING_OUTPUT_QDRANT_HOST=qdrant
-      - SPRING_OPENCRAWLING_OUTPUT_QDRANT_COLLECTION_NAME=enterprise_kb
-      - SPRING_OPENCRAWLING_OUTPUT_QDRANT_DIMENSIONS=1024
-      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
     depends_on:
       - kafka
-      - qdrant
+      - postgres-vector
     networks:
       - opencrawling-network
     restart: unless-stopped
@@ -243,38 +225,26 @@ services:
       context: ../../
       dockerfile: docker/Dockerfile.mcp-server
     image: ghcr.io/opencrawling/oc-mcp-server:latest
-    container_name: oc-mcp-server-service-qdrant
+    container_name: oc-mcp-server-service-camunda
     ports:
       - "8080:8080"
     environment:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PASSWORD=redis_password
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
-      - SPRING_OPENCRAWLING_OUTPUT_TYPE=qdrant
-      - SPRING_OPENCRAWLING_OUTPUT_QDRANT_HOST=qdrant
-      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
-    volumes:
-      - ../../oc-runtime/data:/app/data
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_DATASOURCE_USERNAME=opencrawling
+      - SPRING_DATASOURCE_PASSWORD=opencrawling_password
+      - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres-vector:5432/opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
+      - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
     depends_on:
       - redis
+      - postgres-vector
     networks:
       opencrawling-network:
         aliases:
           - opencrawling-backend
-    restart: unless-stopped
-
-  oc-admin-ui:
-    build:
-      context: ../../oc-admin-ui
-      dockerfile: Dockerfile
-    image: ghcr.io/opencrawling/oc-admin-ui:latest
-    container_name: oc-admin-ui-service-qdrant
-    ports:
-      - "3000:80"
-    depends_on:
-      - oc-mcp-server
-    networks:
-      - opencrawling-network
     restart: unless-stopped
 
 networks:
@@ -283,11 +253,13 @@ networks:
     driver: bridge
 
 volumes:
-  qdrant-data:
-    name: qdrant-data
-  opencrawling-redisdata-qdrant:
-    name: opencrawling-redisdata-qdrant
+  opencrawling-pgdata-camunda:
+    name: opencrawling-pgdata-camunda
+  opencrawling-redisdata-camunda:
+    name: opencrawling-redisdata-camunda
   opencrawling-ollamadata:
     name: opencrawling-ollamadata
-  opencrawling-kafkadata-qdrant:
-    name: opencrawling-kafkadata-qdrant
+  opencrawling-kafkadata-camunda:
+    name: opencrawling-kafkadata-camunda
+  opencrawling-camundadata:
+    name: opencrawling-camundadata

@@ -183,8 +183,22 @@ public class JobOrchestrator {
                             );
                             
                             // Publish document metadata to Kafka topic and wait for confirmation
-                            kafkaTemplate.send(KafkaConfig.TOPIC_NAME, doc.id(), msg).get();
-                            log.info("Published document reference to Kafka: {}", doc.id());
+                            try {
+                                kafkaTemplate.send(KafkaConfig.TOPIC_NAME, doc.id(), msg).get();
+                                log.info("Published document reference to Kafka: {}", doc.id());
+                            } catch (Exception kafkaEx) {
+                                log.warn("Kafka publish skipped or unavailable for doc {}: {}", doc.id(), kafkaEx.getMessage());
+                            }
+                            
+                            // Direct ingestion to OutputConnector for synchronous application runtime
+                            if (outputConnector != null) {
+                                try {
+                                    outputConnector.send(doc).block();
+                                    log.info("Successfully ingested document {} directly into OutputConnector: {}", doc.id(), outputConnector.getName());
+                                } catch (Exception outEx) {
+                                    log.error("Direct OutputConnector ingestion failed for doc {}: {}", doc.id(), outEx.getMessage(), outEx);
+                                }
+                            }
                             
                             return Mono.just((ScanResult) new ScanResult.Success(doc.id(), "1.0"));
                         } catch (Exception e) {

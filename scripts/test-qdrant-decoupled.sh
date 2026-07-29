@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-# Integration test for Apache Ozone Object Storage Claim Check store in docker-compose-decoupled.yml
+# Integration test for docker-compose-decoupled-with-qdrant.yml
 # Exit immediately if a command exits with a non-zero status
 set -e
 
@@ -25,12 +25,7 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Set Ozone as active Claim Check store and configure client implementation strategy (NATIVE vs S3)
-export SPRING_OPENCRAWLING_CLAIM_CHECK_STORE=ozone
-export SPRING_OPENCRAWLING_CLAIM_CHECK_OZONE_CLIENT_TYPE="${OZONE_CLIENT_TYPE:-NATIVE}"
-
-echo -e "${YELLOW}=== Starting OpenCrawling Apache Ozone Claim Check Ingestion Pipeline Integration Test ===${NC}"
-echo -e "${YELLOW}Active Ozone Client Strategy: ${GREEN}${SPRING_OPENCRAWLING_CLAIM_CHECK_OZONE_CLIENT_TYPE}${NC}"
+echo -e "${YELLOW}=== Starting OpenCrawling Decoupled Ingestion Pipeline with Qdrant Integration Test ===${NC}"
 
 # Get the directory where this script is located and switch to the project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,14 +35,18 @@ echo -e "${YELLOW}Switched working directory to project root: $(pwd)${NC}"
 # Check dependencies
 command -v docker >/dev/null 2>&1 || { echo -e "${RED}Docker is required but not installed. Aborting.${NC}" >&2; exit 1; }
 command -v docker-compose >/dev/null 2>&1 || docker compose version >/dev/null 2>&1 || { echo -e "${RED}Docker Compose is required but not installed. Aborting.${NC}" >&2; exit 1; }
+command -v curl >/dev/null 2>&1 || { echo -e "${RED}curl is required but not installed. Aborting.${NC}" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo -e "${RED}jq is required but not installed. Aborting.${NC}" >&2; exit 1; }
+
+COMPOSE_FILE="oc-qdrant-output-connector/docker/docker-compose-decoupled-with-qdrant.yml"
 
 # Helper function for docker compose commands
 compose() {
-  docker compose -f docker-compose-decoupled.yml "$@"
+  docker compose -f "${COMPOSE_FILE}" "$@"
 }
 
 # Clean up any existing containers
-echo -e "${YELLOW}Cleaning up previous decoupled containers...${NC}"
+echo -e "${YELLOW}Cleaning up previous Qdrant decoupled containers...${NC}"
 compose down --remove-orphans || true
 
 # Build microservices images
@@ -55,29 +54,29 @@ echo -e "${YELLOW}Building OpenCrawling decoupled microservice images from sourc
 compose build
 
 # Start services
-echo -e "${YELLOW}Starting complete decoupled multi-service infrastructure with Apache Ozone...${NC}"
+echo -e "${YELLOW}Starting complete decoupled Qdrant-based multi-service infrastructure...${NC}"
 compose up -d
 
 # Define timeout (in seconds)
 TIMEOUT=180
 ELAPSED=0
 
-echo -e "${YELLOW}Waiting for postgres-vector database to be healthy...${NC}"
-until [ "$(docker inspect -f '{{.State.Health.Status}}' postgres-vector-decoupled 2>/dev/null || echo 'starting')" == "healthy" ]; do
+echo -e "${YELLOW}Waiting for Qdrant vector database to be healthy...${NC}"
+until [ "$(docker inspect -f '{{.State.Health.Status}}' qdrant-standalone 2>/dev/null || echo 'starting')" == "healthy" ]; do
   if [ $ELAPSED -ge $TIMEOUT ]; then
-    echo -e "${RED}Timeout waiting for postgres-vector database.${NC}"
-    compose logs postgres
+    echo -e "${RED}Timeout waiting for Qdrant standalone.${NC}"
+    compose logs qdrant
     exit 1
   fi
   sleep 2
   ELAPSED=$((ELAPSED + 2))
 done
-echo -e "${GREEN}postgres-vector database is healthy!${NC}"
+echo -e "${GREEN}Qdrant standalone is healthy!${NC}"
 
 # Reset elapsed timer
 ELAPSED=0
 echo -e "${YELLOW}Waiting for Ollama to be healthy...${NC}"
-until [ "$(docker inspect -f '{{.State.Health.Status}}' ollama-decoupled 2>/dev/null || echo 'starting')" == "healthy" ]; do
+until [ "$(docker inspect -f '{{.State.Health.Status}}' ollama-decoupled-qdrant 2>/dev/null || echo 'starting')" == "healthy" ]; do
   if [ $ELAPSED -ge $TIMEOUT ]; then
     echo -e "${RED}Timeout waiting for Ollama.${NC}"
     compose logs ollama
@@ -90,14 +89,14 @@ echo -e "${GREEN}Ollama is healthy!${NC}"
 
 # Reset elapsed timer
 ELAPSED=0
-echo -e "${YELLOW}Waiting for Ollama model puller to pull mxbai-embed-large and exit...${NC}"
-until [ "$(docker inspect -f '{{.State.Running}}' ollama-model-puller-decoupled 2>/dev/null || echo 'false')" == "false" ]; do
+echo -e "${YELLOW}Waiting for Ollama model puller to pull embedding models and exit...${NC}"
+until [ "$(docker inspect -f '{{.State.Running}}' ollama-model-puller-decoupled-qdrant 2>/dev/null || echo 'false')" == "false" ]; do
   if [ $ELAPSED -ge $TIMEOUT ]; then
     echo -e "${RED}Timeout waiting for Ollama model puller.${NC}"
     compose logs ollama-model-puller
     exit 1
   fi
-  PROGRESS=$(docker logs --tail 1 ollama-model-puller-decoupled 2>&1 || true)
+  PROGRESS=$(docker logs --tail 1 ollama-model-puller-decoupled-qdrant 2>&1 || true)
   if [ ! -z "$PROGRESS" ]; then
     printf "  Progress: %s\r" "$PROGRESS"
   fi
@@ -107,83 +106,66 @@ done
 echo ""
 
 # Check exit code of model puller
-EXIT_CODE=$(docker inspect -f '{{.State.ExitCode}}' ollama-model-puller-decoupled 2>/dev/null || echo "1")
+EXIT_CODE=$(docker inspect -f '{{.State.ExitCode}}' ollama-model-puller-decoupled-qdrant 2>/dev/null || echo "1")
 if [ "$EXIT_CODE" -ne 0 ]; then
   echo -e "${RED}Ollama model puller failed with exit code $EXIT_CODE.${NC}"
   compose logs ollama-model-puller
   exit 1
 fi
-echo -e "${GREEN}Ollama embedding model pulled successfully!${NC}"
-
-# Reset elapsed timer
-ELAPSED=0
-echo -e "${YELLOW}Waiting for Apache Ozone 2.2.0 S3 Gateway (port 9878) to be ready...${NC}"
-until curl -s http://localhost:9878/ >/dev/null 2>&1 || [ $ELAPSED -ge $TIMEOUT ]; do
-  sleep 2
-  ELAPSED=$((ELAPSED + 2))
-done
-if [ $ELAPSED -ge $TIMEOUT ]; then
-  echo -e "${RED}Timeout waiting for Apache Ozone S3 Gateway.${NC}"
-  compose logs ozone-s3g
-  exit 1
-fi
-echo -e "${GREEN}Apache Ozone 2.2.0 S3 Gateway is ready!${NC}"
+echo -e "${GREEN}Ollama embedding models pulled successfully!${NC}"
 
 # Create a sample test document in the mounted directory
 TEST_DOC_DIR="./oc-runtime/data"
 mkdir -p "$TEST_DOC_DIR"
-TEST_FILE="$TEST_DOC_DIR/ozone-claim-check-test.txt"
-echo "Apache Ozone S3 Gateway Claim Check pattern test for OpenCrawling! Decoupled object storage integration test worked successfully." > "$TEST_FILE"
+TEST_FILE="$TEST_DOC_DIR/qdrant-decoupled-integration-test.txt"
+echo "OpenCrawling is an awesome open-source pipeline! Decoupled integration test with Qdrant worked successfully." > "$TEST_FILE"
 echo -e "${GREEN}Created test document: $TEST_FILE${NC}"
 
-# Restart crawler service to trigger directory scan and Ozone upload
-echo -e "${YELLOW}Restarting crawler service with Apache Ozone Claim Check store...${NC}"
+# Restart crawler to trigger directory scan and Kafka publication
+echo -e "${YELLOW}Restarting crawler service to trigger directory scan...${NC}"
 compose restart oc-crawler
 
 # Wait for crawler completion
 ELAPSED=0
 echo -e "${YELLOW}Waiting for oc-crawler service to finish execution...${NC}"
-until [ "$(docker inspect -f '{{.State.Running}}' oc-crawler-service 2>/dev/null || echo 'false')" == "false" ]; do
+until [ "$(docker inspect -f '{{.State.Running}}' oc-crawler-service-qdrant 2>/dev/null || echo 'false')" == "false" ]; do
   if [ $ELAPSED -ge $TIMEOUT ]; then
-    echo -e "${RED}Timeout waiting for oc-crawler-service.${NC}"
+    echo -e "${RED}Timeout waiting for oc-crawler-service-qdrant.${NC}"
     compose logs oc-crawler
     exit 1
   fi
   sleep 2
   ELAPSED=$((ELAPSED + 2))
 done
-echo -e "${GREEN}oc-crawler-service finished directory scanning and Ozone upload!${NC}"
+echo -e "${GREEN}oc-crawler-service-qdrant finished directory scanning!${NC}"
 
-# Wait for messaging pipeline to process document vectors (with retries)
-echo -e "${YELLOW}Waiting for Kafka consumers to process and store vectors via Ozone claim check...${NC}"
+# Wait for messaging pipeline to process document vectors
+echo -e "${YELLOW}Waiting for Kafka consumers to process and store vectors in Qdrant...${NC}"
 RECORD_COUNT=0
 ELAPSED=0
 TIMEOUT=120
 until [ "$RECORD_COUNT" -gt 0 ] 2>/dev/null || [ $ELAPSED -ge $TIMEOUT ]; do
   sleep 2
   ELAPSED=$((ELAPSED + 2))
-  RECORD_COUNT=$(docker exec -i postgres-vector-decoupled psql -U opencrawling -d opencrawling -t -A -P pager=off -c \
-    "SELECT (SELECT count(*) FROM vector_store) \
-          + (SELECT count(*) FROM vector_store_384) \
-          + (SELECT count(*) FROM vector_store_768) \
-          + (SELECT count(*) FROM vector_store_1024);" 2>/dev/null || echo "0")
-  RECORD_COUNT=$(echo "$RECORD_COUNT" | tr -d '[:space:]')
-  if [ -z "$RECORD_COUNT" ]; then
+
+  # Count points in Qdrant collection via REST API
+  COLL_INFO=$(curl -s http://localhost:6333/collections/enterprise_kb 2>/dev/null || echo "{}")
+  RECORD_COUNT=$(echo "$COLL_INFO" | jq -r '.result.points_count // 0' 2>/dev/null || echo "0")
+
+  if [ -z "$RECORD_COUNT" ] || [ "$RECORD_COUNT" == "null" ]; then
     RECORD_COUNT=0
   fi
-  printf "  Elapsed: %ds, Total vector records across all tables: %s\r" "$ELAPSED" "$RECORD_COUNT"
+  printf "  Elapsed: %ds, Total vector points in Qdrant enterprise_kb: %s\r" "$ELAPSED" "$RECORD_COUNT"
 done
 echo ""
 
-# Verify pgvector database content
-echo -e "${YELLOW}Verifying PgVector table records for Ozone claim check test...${NC}"
-echo -e "PgVector Records count: ${GREEN}$RECORD_COUNT${NC}"
-if [ "$RECORD_COUNT" -eq 0 ] || [ "$RECORD_COUNT" == "failed" ]; then
-  echo -e "${RED}Apache Ozone integration test failed: 0 records found in pgvector database!${NC}"
-  compose logs oc-ingestion-consumer
-  compose logs oc-embedding-consumer
-  compose logs oc-writer
-  compose logs ozone-s3g
+# Verify Qdrant collection content
+echo -e "${YELLOW}Verifying Qdrant collection records...${NC}"
+echo -e "Qdrant Points count: ${GREEN}$RECORD_COUNT${NC}"
+if [ "$RECORD_COUNT" -eq 0 ]; then
+  echo -e "${RED}Qdrant decoupled integration test failed: 0 points found in Qdrant collection!${NC}"
+  echo -e "${YELLOW}Printing consumer service logs for diagnosis...${NC}"
+  compose logs oc-writer-consumer
   exit 1
 fi
 
@@ -205,14 +187,14 @@ done
 echo -e "MCP Server HTTP Status: ${GREEN}$HTTP_STATUS${NC}"
 
 if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "405" ] && [ "$HTTP_STATUS" != "404" ]; then
-  echo -e "${RED}Ozone decoupled integration test failed: MCP Server returned unexpected status $HTTP_STATUS${NC}"
+  echo -e "${RED}Qdrant decoupled integration test failed: MCP Server returned unexpected status $HTTP_STATUS${NC}"
   compose logs oc-mcp-server
   exit 1
 fi
 echo -e "${GREEN}MCP Server is reachable (HTTP $HTTP_STATUS)${NC}"
 
 echo -e "${GREEN}================================================================================${NC}"
-echo -e "${GREEN}SUCCESS: Apache Ozone Claim Check Decoupled Pipeline Integration Test Passed!${NC}"
+echo -e "${GREEN}SUCCESS: Qdrant Decoupled Multi-Service Pipeline Integration Test Passed!${NC}"
 echo -e "${GREEN}================================================================================${NC}"
 
 # Clean up temporary test files

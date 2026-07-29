@@ -98,7 +98,10 @@ export default function ConnectorForm() {
   const [isSaving, setIsSaving] = useState(false)
   const [selectedConnector, setSelectedConnector] = useState<string | null>(null)
 
-  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<ConnectorFormData>({
+  const [isCheckingConnection, setIsCheckingConnection] = useState(false)
+  const [checkResult, setCheckResult] = useState<{ success: boolean; message: string; details?: string } | null>(null)
+
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch, getValues } = useForm<ConnectorFormData>({
     defaultValues: {
       maxConnections: 10,
       type: 'repository',
@@ -130,6 +133,7 @@ export default function ConnectorForm() {
 
   const handleReset = () => {
     setSelectedConnector(null)
+    setCheckResult(null)
     reset({ 
       name: '', 
       description: '', 
@@ -142,7 +146,27 @@ export default function ConnectorForm() {
 
   const handleSelectConnector = (connector: ConnectorFormData) => {
     setSelectedConnector(connector.name)
+    setCheckResult(null)
     reset(connector)
+  }
+
+  const handleCheckConnection = async () => {
+    setIsCheckingConnection(true)
+    setCheckResult(null)
+    try {
+      const formData = getValues()
+      const response = await connectorApi.checkConnection({ ...formData, type: activeTab })
+      setCheckResult(response.data)
+    } catch (error: any) {
+      console.error('Error checking connection:', error)
+      setCheckResult({
+        success: false,
+        message: error.response?.data?.message || error.message || 'Failed to communicate with OpenCrawling server.',
+        details: error.toString()
+      })
+    } finally {
+      setIsCheckingConnection(false)
+    }
   }
 
   const onSubmit = async (data: ConnectorFormData) => {
@@ -345,6 +369,16 @@ export default function ConnectorForm() {
                   </div>
                </div>
                <div className="flex gap-3">
+                  <button 
+                    type="button" 
+                    onClick={handleCheckConnection} 
+                    disabled={isCheckingConnection || !selectedClass} 
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 transition-colors disabled:opacity-50"
+                    title="Test connection consistency and reachability"
+                  >
+                    {isCheckingConnection ? <Loader2 className="w-4 h-4 animate-spin text-cyan-400" /> : <ShieldCheck className="w-4 h-4 text-cyan-400" />}
+                    Check Connection
+                  </button>
                   <button type="button" onClick={handleReset} className="btn-secondary">
                     {selectedConnector ? 'Cancel' : 'Reset'}
                   </button>
@@ -354,6 +388,19 @@ export default function ConnectorForm() {
                   </button>
                </div>
             </div>
+
+            {checkResult && (
+              <div className={`p-4 rounded-lg border text-sm flex items-start gap-3 animate-in fade-in duration-300 ${checkResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+                {checkResult.success ? <ShieldCheck className="w-5 h-5 flex-shrink-0 text-emerald-400 mt-0.5" /> : <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-400 mt-0.5" />}
+                <div className="flex-1 space-y-1">
+                  <p className="font-semibold">{checkResult.success ? 'Connection Verified & Reliable' : 'Connection Verification Failed'}</p>
+                  <p className="text-xs opacity-90">{checkResult.message}</p>
+                  {checkResult.details && (
+                    <pre className="mt-2 p-2 bg-black/40 rounded text-[11px] font-mono max-h-24 overflow-y-auto whitespace-pre-wrap">{checkResult.details}</pre>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="card-container space-y-4">

@@ -100,7 +100,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - opencrawling-ollamadata-milvus:/root/.ollama
+      - opencrawling-ollamadata:/root/.ollama
     networks:
       - opencrawling-network
     healthcheck:
@@ -335,7 +335,7 @@ volumes:
     name: milvus-minio-data
   opencrawling-redisdata-milvus:
     name: opencrawling-redisdata-milvus
-  opencrawling-ollamadata-milvus:
-    name: opencrawling-ollamadata-milvus
+  opencrawling-ollamadata:
+    name: opencrawling-ollamadata
   opencrawling-kafkadata-milvus:
     name: opencrawling-kafkadata-milvus

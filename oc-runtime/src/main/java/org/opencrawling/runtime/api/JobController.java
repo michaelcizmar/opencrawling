@@ -199,20 +199,27 @@ public class JobController {
         log.info("Starting job {}", id);
         updateJobStatus(id, "Running");
 
+        final String cleanId = id != null ? id.trim() : "";
+
         // Find the job to get parameters
         JobDTO activeJob = jobs.stream()
-            .filter(j -> j.id().equals(id))
+            .filter(j -> j.id() != null && j.id().trim().equalsIgnoreCase(cleanId))
             .findFirst()
             .orElse(null);
             
-        if (activeJob != null) {
-            // Find the repository connector configuration in connectors.json
+        if (activeJob == null) {
+            log.warn("Job with ID '{}' not found in loaded jobs list: {}", cleanId, jobs.stream().map(JobDTO::id).toList());
+        } else {
+            log.info("Found activeJob: {} [path: {}, outputConnector: {}]", activeJob.name(), activeJob.path(), activeJob.outputConnector());
             RepositoryConnector resolvedConnector = null;
+            OutputConnector resolvedOutputConnector = null;
             try {
                 List<ConnectorController.ConnectorDTO> connectors = 
                     PersistenceHelper.loadList("connectors.json", ConnectorController.ConnectorDTO.class, List.of());
+                
+                // 1. Repository Connector Resolution
                 ConnectorController.ConnectorDTO connConfig = connectors.stream()
-                    .filter(c -> c.name().equals(activeJob.repositoryConnector()))
+                    .filter(c -> c.name().equalsIgnoreCase(activeJob.repositoryConnector()))
                     .findFirst()
                     .orElse(null);
                     
@@ -236,26 +243,76 @@ public class JobController {
                         resolvedConnector = fileSystemRepositoryConnector;
                     }
                 }
+
+                // 2. Output Connector Resolution
+                ConnectorController.ConnectorDTO outConfig = connectors.stream()
+                    .filter(c -> c.name().equalsIgnoreCase(activeJob.outputConnector()) || (c.type() != null && c.type().equalsIgnoreCase("output") && c.name().equalsIgnoreCase(activeJob.outputConnector())))
+                    .findFirst()
+                    .orElse(null);
+
+                if (outConfig != null) {
+                    String cls = outConfig.className();
+                    if (cls.contains("Qdrant")) {
+                        String host = outConfig.configuration().getOrDefault("qdrantHost", "localhost");
+                        int grpcPort = 6334;
+                        try {
+                            grpcPort = Integer.parseInt(outConfig.configuration().getOrDefault("qdrantPort", "6334"));
+                        } catch (Exception ignored) {}
+                        boolean useTls = Boolean.parseBoolean(outConfig.configuration().getOrDefault("useTls", "false"));
+                        String apiKey = outConfig.configuration().getOrDefault("qdrantApiKey", "");
+                        String collectionName = outConfig.configuration().getOrDefault("qdrantCollection", "enterprise_kb");
+                        int dimensions = 1024;
+                        try {
+                            dimensions = Integer.parseInt(outConfig.configuration().getOrDefault("qdrantDimensions", "1024"));
+                        } catch (Exception ignored) {}
+
+                        io.qdrant.client.QdrantGrpcClient.Builder grpcBuilder = io.qdrant.client.QdrantGrpcClient.newBuilder(host, grpcPort, useTls);
+                        if (apiKey != null && !apiKey.isBlank()) {
+                            grpcBuilder.withApiKey(apiKey);
+                        }
+                        io.qdrant.client.QdrantClient qdrantClient = new io.qdrant.client.QdrantClient(grpcBuilder.build());
+
+                        org.opencrawling.qdrant.config.QdrantOutputProperties props = new org.opencrawling.qdrant.config.QdrantOutputProperties(
+                            host, grpcPort, apiKey, collectionName, dimensions,
+                            org.opencrawling.qdrant.config.QdrantOutputProperties.Distance.COSINE,
+                            org.opencrawling.qdrant.config.QdrantOutputProperties.Quantization.NONE,
+                            useTls, 500
+                        );
+                        org.opencrawling.qdrant.config.QdrantCollectionInitializer initializer = new org.opencrawling.qdrant.config.QdrantCollectionInitializer(qdrantClient, props);
+                        initializer.initializeCollection();
+
+                        org.opencrawling.qdrant.QdrantPointMapper mapper = new org.opencrawling.qdrant.QdrantPointMapper();
+                        resolvedOutputConnector = new org.opencrawling.qdrant.QdrantOutputConnector(qdrantClient, props, mapper, null);
+                        log.info("Successfully resolved dynamic Qdrant output connector for collection '{}'", collectionName);
+                    }
+                }
             } catch (Exception e) {
-                log.warn("Failed to resolve repository connector for job {}: {}", id, e.getMessage());
+                log.error("Failed to resolve dynamic connectors for job {}: {}", id, e.getMessage(), e);
             }
             
             if (resolvedConnector == null) {
                 resolvedConnector = fileSystemRepositoryConnector; // Fallback
             }
+            if (resolvedOutputConnector == null) {
+                resolvedOutputConnector = this.outputConnector; // Fallback
+            }
             
             final RepositoryConnector finalConnector = resolvedConnector;
+            final OutputConnector finalOutputConnector = resolvedOutputConnector;
+            final JobDTO finalActiveJob = activeJob;
+
+            log.info("Launching background Virtual Thread for job {} with OutputConnector: {}", id, finalOutputConnector.getName());
             
             // Execute real crawler inside virtual thread
             Thread.ofVirtual().start(() -> {
                 try {
-                    log.info("Starting real background crawl job for path: {}", activeJob.path());
-                    jobOrchestrator.runJob(finalConnector, outputConnector, activeJob.path(), activeJob.transformationConnector(), activeJob.id(), activeJob.narrativization());
-                    log.info("Real background crawl job completed successfully!");
+                    log.info("Background Virtual Thread running. Path: {}, OutputConnector: {}", finalActiveJob.path(), finalOutputConnector.getName());
+                    jobOrchestrator.runJob(finalConnector, finalOutputConnector, finalActiveJob.path(), finalActiveJob.transformationConnector(), finalActiveJob.id(), finalActiveJob.narrativization());
+                    log.info("Background Virtual Thread completed successfully!");
                     // update status to completed when done, and pull actual db document count
                     updateJobStatusAndStage(id, "Finished", "Completed", getActualDbDocCount());
                 } catch (Exception e) {
-                    log.error("Real background crawl job failed: ", e);
+                    log.error("Background Virtual Thread failed: {}", e.getMessage(), e);
                     updateJobStatusAndStage(id, "Error", "Failed", getActualDbDocCount());
                 }
             });
@@ -279,9 +336,10 @@ public class JobController {
     }
 
     private void updateJobStatus(String id, String status) {
+        String cleanId = id != null ? id.trim() : "";
         for (int i = 0; i < jobs.size(); i++) {
             JobDTO job = jobs.get(i);
-            if (job.id().equals(id)) {
+            if (job.id() != null && job.id().trim().equalsIgnoreCase(cleanId)) {
                 String lastRun = status.equals("Running") ? LocalDateTime.now().format(formatter) : job.lastRun();
                 long docCount = job.documents();
                 String stage = "Idle";
