@@ -32,37 +32,18 @@ Exposes knowledge retrieval tools to AI models and agents using the Model Contex
 
 To avoid clogging Kafka partitions with megabytes of binary file data (PDFs, Excel files, DOCX), OpenCrawling uses the **Claim Check Pattern**:
 
-```
-[Repository] ──(Crawl)──> [Crawler Engine] ──(Save Raw)──> [Shared Storage]
-                                  │
-                       (Publish IngestionMessage)
-                                  │
-                                  ▼
-                        [Kafka Ingestion Topic]
-                                  │
-                       (Consume IngestionMessage)
-                                  │
-                                  ▼
-               [IngestionConsumer (Apache Tika Text Extractor)]
-                                  │
-                           (Read from Storage)
-                                  │
-                     (Publish ChunkMessages to Kafka)
-                                  │
-                                  ▼
-                       [Kafka Chunks Topic]
-                                  │
-                        [Embedding Service]
-                                  │
-                        (Generate Vector)
-                                  │
-                                  ▼
-                       [Kafka Embedded Topic]
-                                  │
-                        [Vector Store Writer]
-                                  │
-                                  ▼
-                             [pgvector]
+```mermaid
+flowchart TD
+    A[Repository] -->|Crawl| B[Crawler Engine]
+    B -->|Save Raw| C[Shared Storage]
+    B -->|Publish IngestionMessage| D[Kafka Ingestion Topic]
+    D -->|Consume IngestionMessage| E["IngestionConsumer (Apache Tika Text Extractor)"]
+    E -->|Read from Storage| C
+    E -->|Publish ChunkMessages| F[Kafka Chunks Topic]
+    F --> G[Embedding Service]
+    G -->|Generate Vector| H[Kafka Embedded Topic]
+    H --> I[Vector Store Writer]
+    I --> J[(pgvector)]
 ```
 
 1.  **Crawl & Check-In**: The repository connector discovers a document. Instead of sending the full payload, it saves the file to a shared file/object storage and publishes an `IngestionMessage` (the Claim Check) to Kafka.

@@ -64,6 +64,9 @@ const getConnectorIconInfo = (className: string) => {
   if (className.includes('Milvus')) {
     return { icon: Cpu, color: 'text-cyan-400', bg: 'bg-cyan-400/10', border: 'border-cyan-500/20' }
   }
+  if (className.includes('Qdrant')) {
+    return { icon: Network, color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-500/20' }
+  }
   if (className.includes('elasticsearch')) {
     return { icon: Search, color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-green-500/20' }
   }
@@ -183,6 +186,7 @@ export default function ConnectorForm() {
     output: [
       { label: 'PGVector Store', value: 'org.opencrawling.vector.VectorOutputConnector' },
       { label: 'Milvus Vector Store', value: 'org.opencrawling.milvus.MilvusOutputConnector' },
+      { label: 'Qdrant Vector Store', value: 'org.opencrawling.qdrant.QdrantOutputConnector' },
       { label: 'OpenSearch 2.x Output Connector', value: 'org.opencrawling.opensearch2.OpenSearch2OutputConnector' },
       { label: 'OpenSearch 3.x Output Connector', value: 'org.opencrawling.opensearch3.OpenSearch3OutputConnector' },
     ],
@@ -770,6 +774,91 @@ export default function ConnectorForm() {
                             <option value="HNSW">HNSW (Recommended)</option>
                             <option value="IVF_FLAT">IVF_FLAT</option>
                             <option value="FLAT">FLAT</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Qdrant Vector Store */}
+                  {selectedClass === 'org.opencrawling.qdrant.QdrantOutputConnector' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Host</label>
+                          <input
+                            {...register('configuration.qdrantHost')}
+                            placeholder="localhost"
+                            defaultValue="localhost"
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">gRPC Port</label>
+                          <input
+                            type="number"
+                            {...register('configuration.qdrantPort', { valueAsNumber: true })}
+                            placeholder="6334"
+                            defaultValue={6334}
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">API Key</label>
+                          <input
+                            type="password"
+                            {...register('configuration.qdrantApiKey')}
+                            placeholder="(optional, for Qdrant Cloud)"
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Collection Name</label>
+                          <input
+                            {...register('configuration.qdrantCollection')}
+                            placeholder="enterprise_kb"
+                            defaultValue="enterprise_kb"
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Dimensions</label>
+                          <input
+                            type="number"
+                            {...register('configuration.qdrantDimensions', { valueAsNumber: true })}
+                            placeholder="1024"
+                            defaultValue={1024}
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Distance Metric</label>
+                          <select
+                            {...register('configuration.qdrantDistance')}
+                            defaultValue="COSINE"
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                          >
+                            <option value="COSINE">Cosine (Default)</option>
+                            <option value="DOT">Dot Product</option>
+                            <option value="EUCLID">Euclidean</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Quantization</label>
+                          <select
+                            {...register('configuration.qdrantQuantization')}
+                            defaultValue="NONE"
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                          >
+                            <option value="NONE">None (Default)</option>
+                            <option value="SCALAR_INT8">Scalar (INT8)</option>
+                            <option value="BINARY">Binary</option>
                           </select>
                         </div>
                       </div>

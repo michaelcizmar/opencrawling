@@ -79,6 +79,11 @@
         </dependency>
         <dependency>
             <groupId>org.opencrawling</groupId>
+            <artifactId>oc-qdrant-output-connector</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.opencrawling</groupId>
             <artifactId>oc-opensearch2-output-connector</artifactId>
             <version>${project.version}</version>
         </dependency>
