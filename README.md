@@ -618,6 +618,12 @@ We provide fully automated end-to-end integration test scripts that build, boot,
     ```
     This script tests the decoupled architecture using Apache Ozone 2.2.0 (SCM, OM, Datanode, S3 Gateway) as the Claim Check Object Store for large document payloads.
 
+*   **Qdrant Decoupled Pipeline**:
+    ```bash
+    ./scripts/test-qdrant-decoupled.sh
+    ```
+    This script tests the decoupled architecture using Qdrant vector database, querying the Qdrant gRPC/REST API to verify point ingestion and checking Secure MCP Server endpoints.
+
 *   **OpenTelemetry & Observability Pipeline**:
     ```bash
     ./scripts/test-observability.sh
