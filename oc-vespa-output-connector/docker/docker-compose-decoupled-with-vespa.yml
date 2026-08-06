@@ -1,0 +1,354 @@
+#
+# Copyright © 2026 the original author or authors (michael@michaelcizmar.com)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+services:
+  # --- Vespa ---
+  vespa:
+    container_name: vespa-standalone
+    image: vespaengine/vespa:8
+    ports:
+      # Host 8080 is already claimed by oc-mcp-server below; Vespa's document/search API
+      # is reachable from the host at 8090, and from other containers at vespa:8080.
+      - "8090:8080"
+      - "19071:19071"
+    volumes:
+      - vespa-data:/opt/vespa/var
+    networks:
+      - opencrawling-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:19071/ApplicationStatus || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # One-shot: deploys vespa-app/ (schema + services.xml) via the config server's deploy REST API,
+  # then exits. The connector itself only feeds documents, it does not manage schema.
+  #
+  # The vespa service's own healthcheck only covers the config server (19071) - it can't also
+  # require the document/search API (8080) to be up, since that API doesn't start serving until
+  # *after* a schema is deployed (the very thing this container does), which would be circular.
+  # So this container polls 8080 itself after deploying, and only exits 0 once it's genuinely
+  # serving - every other service below depends on this one completing successfully specifically
+  # so their eager vespaFeedClient beans don't race Vespa's own post-activation startup delay.
+  vespa-deploy:
+    container_name: vespa-schema-deploy
+    image: alpine:3.20
+    volumes:
+      - ../vespa-app:/vespa-app:ro
+    networks:
+      - opencrawling-network
+    depends_on:
+      vespa:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache curl >/dev/null
+        cd /vespa-app
+        tar czf - . | curl -sf --header "Content-Type:application/x-gzip" --data-binary @- \
+          http://vespa:19071/application/v2/tenant/default/prepareandactivate
+        echo "Schema deployed - waiting for the document/search API to start serving..."
+        for i in $(seq 1 60); do
+          if curl -sf http://vespa:8080/state/v1/health | grep -q '"up"'; then
+            echo "Vespa document/search API is up."
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "Timed out waiting for the Vespa document/search API to become healthy." >&2
+        exit 1
+
+  redis:
+    image: redis/redis-stack:7.4.0-v8
+    container_name: redis-stack-decoupled-vespa
+    environment:
+      REDIS_ARGS: "--requirepass redis_password"
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - opencrawling-redisdata-vespa:/data
+    networks:
+      - opencrawling-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:0.23.4
+    container_name: ollama-decoupled-vespa
+    ports:
+      - "11434:11434"
+    volumes:
+      - opencrawling-ollamadata:/root/.ollama
+    networks:
+      - opencrawling-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ollama-model-puller:
+    image: ollama/ollama:0.23.4
+    container_name: ollama-model-puller-decoupled-vespa
+    entrypoint: ["/bin/sh", "-c", "ollama pull mxbai-embed-large && ollama pull nomic-embed-text && ollama pull all-minilm && ollama pull llama3.2"]
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    networks:
+      - opencrawling-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka-decoupled-vespa
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:9094,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka:9094,EXTERNAL://127.0.0.1:9092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+    ports:
+      - "9092:9092"
+    volumes:
+      - opencrawling-kafkadata-vespa:/var/lib/kafka/data
+    networks:
+      - opencrawling-network
+
+  # --- Apache Ozone Object Storage (Claim Check Store) ---
+  ozone-scm:
+    image: apache/ozone:2.2.0
+    container_name: ozone-scm-vespa
+    hostname: scm
+    environment:
+      OZONE-SITE.XML_ozone.scm.client.address: scm
+      OZONE-SITE.XML_ozone.om.address: om
+    command: ["ozone", "scm"]
+    networks:
+      - opencrawling-network
+
+  ozone-om:
+    image: apache/ozone:2.2.0
+    container_name: ozone-om-vespa
+    hostname: om
+    environment:
+      OZONE-SITE.XML_ozone.scm.client.address: scm
+      OZONE-SITE.XML_ozone.om.address: om
+    command: ["ozone", "om"]
+    depends_on:
+      - ozone-scm
+    networks:
+      - opencrawling-network
+
+  ozone-datanode:
+    image: apache/ozone:2.2.0
+    container_name: ozone-datanode-vespa
+    environment:
+      OZONE-SITE.XML_ozone.scm.client.address: scm
+      OZONE-SITE.XML_ozone.om.address: om
+    command: ["ozone", "datanode"]
+    depends_on:
+      - ozone-scm
+      - ozone-om
+    networks:
+      - opencrawling-network
+
+  ozone-s3g:
+    image: apache/ozone:2.2.0
+    container_name: ozone-s3g-vespa
+    hostname: s3g
+    ports:
+      - "9878:9878"
+    environment:
+      OZONE-SITE.XML_ozone.scm.client.address: scm
+      OZONE-SITE.XML_ozone.om.address: om
+    command: ["ozone", "s3g"]
+    depends_on:
+      - ozone-scm
+      - ozone-om
+    networks:
+      - opencrawling-network
+
+  # --- Decoupled OpenCrawling Services ---
+  oc-crawler:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.crawler
+    image: ghcr.io/opencrawling/oc-crawler:latest
+    container_name: oc-crawler-service-vespa
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - SPRING_OPENCRAWLING_CRAWL_ON_STARTUP=true
+      - SPRING_OPENCRAWLING_SCAN_PATH=/data
+      - SPRING_MAIN_WEB_APPLICATION_TYPE=none
+      - SPRING_OPENCRAWLING_OUTPUT_TYPE=vespa
+      - SPRING_OPENCRAWLING_OUTPUT_VESPA_ENDPOINT=http://vespa:8080
+      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
+    volumes:
+      - ../../oc-runtime/data:/data  # Mount sample files directory
+    depends_on:
+      kafka:
+        condition: service_started
+      vespa:
+        condition: service_healthy
+      vespa-deploy:
+        condition: service_completed_successfully
+    networks:
+      - opencrawling-network
+    restart: on-failure
+
+  oc-ingestion-consumer:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.ingestion-consumer
+    image: ghcr.io/opencrawling/oc-ingestion-consumer:latest
+    container_name: oc-ingestion-consumer-service-vespa
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - SPRING_OPENCRAWLING_OUTPUT_TYPE=vespa
+      - SPRING_OPENCRAWLING_OUTPUT_VESPA_ENDPOINT=http://vespa:8080
+      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
+    volumes:
+      - ../../oc-runtime/data:/data  # Needs access to resolve local claim check file URIs
+    depends_on:
+      kafka:
+        condition: service_started
+      vespa:
+        condition: service_healthy
+      vespa-deploy:
+        condition: service_completed_successfully
+    networks:
+      - opencrawling-network
+    restart: unless-stopped
+
+  oc-embedding-consumer:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.embedding-consumer
+    image: ghcr.io/opencrawling/oc-embedding-consumer:latest
+    container_name: oc-embedding-consumer-service-vespa
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - SPRING_AI_OLLAMA_BASE_URL=http://ollama:11434
+      - SPRING_AI_OPENAI_API_KEY=mock-key
+      - SPRING_OPENCRAWLING_OUTPUT_TYPE=vespa
+      - SPRING_OPENCRAWLING_OUTPUT_VESPA_ENDPOINT=http://vespa:8080
+      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
+    depends_on:
+      - kafka
+      - ollama
+    networks:
+      - opencrawling-network
+    restart: unless-stopped
+
+  oc-writer-consumer:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.writer-consumer
+    image: ghcr.io/opencrawling/oc-writer-consumer:latest
+    container_name: oc-writer-service-vespa
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - SPRING_OPENCRAWLING_OUTPUT_TYPE=vespa
+      - SPRING_OPENCRAWLING_OUTPUT_VESPA_ENDPOINT=http://vespa:8080
+      - SPRING_OPENCRAWLING_OUTPUT_VESPA_DOCUMENT_TYPE=opencrawling_chunk
+      - SPRING_OPENCRAWLING_OUTPUT_VESPA_DIMENSIONS=1024
+      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
+    depends_on:
+      kafka:
+        condition: service_started
+      vespa:
+        condition: service_healthy
+      vespa-deploy:
+        condition: service_completed_successfully
+    networks:
+      - opencrawling-network
+    restart: unless-stopped
+
+  oc-mcp-server:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.mcp-server
+    image: ghcr.io/opencrawling/oc-mcp-server:latest
+    container_name: oc-mcp-server-service-vespa
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PASSWORD=redis_password
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - SPRING_AI_OLLAMA_BASE_URL=http://ollama:11434
+      - SPRING_OPENCRAWLING_OUTPUT_TYPE=vespa
+      - SPRING_OPENCRAWLING_OUTPUT_VESPA_ENDPOINT=http://vespa:8080
+      - SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
+    volumes:
+      - ../../oc-runtime/data:/app/data
+    depends_on:
+      redis:
+        condition: service_started
+      ollama:
+        condition: service_healthy
+      vespa:
+        condition: service_healthy
+      vespa-deploy:
+        condition: service_completed_successfully
+    networks:
+      opencrawling-network:
+        aliases:
+          - opencrawling-backend
+    restart: unless-stopped
+
+  oc-admin-ui:
+    build:
+      context: ../../oc-admin-ui
+      dockerfile: Dockerfile
+    image: ghcr.io/opencrawling/oc-admin-ui:latest
+    container_name: oc-admin-ui-service-vespa
+    ports:
+      - "3000:80"
+    depends_on:
+      - oc-mcp-server
+    networks:
+      - opencrawling-network
+    restart: unless-stopped
+
+networks:
+  opencrawling-network:
+    name: opencrawling-network
+    driver: bridge
+
+volumes:
+  vespa-data:
+    name: vespa-data
+  opencrawling-redisdata-vespa:
+    name: opencrawling-redisdata-vespa
+  opencrawling-ollamadata:
+    name: opencrawling-ollamadata
+  opencrawling-kafkadata-vespa:
+    name: opencrawling-kafkadata-vespa

@@ -1,0 +1,142 @@
+/*
+ * Copyright © ${year} the original author or authors (michael@michaelcizmar.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.opencrawling.vespa;
+
+import ai.vespa.feed.client.DocumentId;
+import ai.vespa.feed.client.FeedClient;
+import ai.vespa.feed.client.OperationParameters;
+import ai.vespa.feed.client.Result;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.opencrawling.core.document.RepositoryDocument;
+import org.opencrawling.core.security.PermissionRule;
+import org.opencrawling.core.security.SecurityConfig;
+import org.opencrawling.vespa.config.VespaOutputProperties;
+import org.springframework.ai.embedding.EmbeddingModel;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+class VespaOutputConnectorTest {
+
+    private VespaOutputConnector connector;
+
+    @Mock
+    private FeedClient feedClient;
+
+    @Mock
+    private EmbeddingModel embeddingModel;
+
+    private final VespaOutputProperties properties = new VespaOutputProperties(
+            "http://localhost:8080", "opencrawling", "opencrawling_chunk", 2, 30, false, null, null, null);
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        connector = new VespaOutputConnector(feedClient, properties, new VespaDocumentMapper(), embeddingModel);
+    }
+
+    @Test
+    void testGetName() {
+        assertThat(connector.getName()).isEqualTo("VespaOutputConnector");
+    }
+
+    @Test
+    void testSendDocumentFeedsEachChunk() throws Exception {
+        String contentText = "This is a test content that is long enough to be indexed in the vector store.";
+        ByteArrayInputStream bais = new ByteArrayInputStream(contentText.getBytes(StandardCharsets.UTF_8));
+
+        Map<String, List<String>> metadata = new HashMap<>();
+        metadata.put("mimeType", List.of("text/plain"));
+        metadata.put("title", List.of("Test Title"));
+
+        SecurityConfig securityConfig = new SecurityConfig(true, List.of(
+                new PermissionRule("user1", "user", "User One", "read"),
+                new PermissionRule("baduser", "user", "Bad User", "deny")
+        ));
+
+        RepositoryDocument doc = new RepositoryDocument(
+                "doc-123",
+                "file://tmp/doc-123.txt",
+                bais,
+                metadata,
+                "acl-123",
+                securityConfig,
+                Instant.now()
+        );
+
+        when(embeddingModel.embed(any(org.springframework.ai.document.Document.class)))
+                .thenReturn(new float[]{0.1f, 0.2f});
+
+        Result result = mock(Result.class);
+        when(feedClient.put(any(DocumentId.class), anyString(), any(OperationParameters.class)))
+                .thenReturn(CompletableFuture.completedFuture(result));
+
+        connector.send(doc).block();
+
+        ArgumentCaptor<DocumentId> idCaptor = ArgumentCaptor.forClass(DocumentId.class);
+        ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
+        verify(feedClient, times(1)).put(idCaptor.capture(), jsonCaptor.capture(), any(OperationParameters.class));
+
+        assertThat(idCaptor.getValue().namespace()).isEqualTo("opencrawling");
+        assertThat(idCaptor.getValue().documentType()).isEqualTo("opencrawling_chunk");
+        assertThat(idCaptor.getValue().userSpecific()).contains("doc-123");
+        assertThat(jsonCaptor.getValue()).contains("\"security_allowed_read\"");
+        assertThat(jsonCaptor.getValue()).contains("\"security_denied_read\"");
+    }
+
+    @Test
+    void testSendRoutesToDimensionSpecificDocumentTypeWithoutAnyConfigChange() throws Exception {
+        String contentText = "Switching embedding models should not require redeploying anything.";
+        ByteArrayInputStream bais = new ByteArrayInputStream(contentText.getBytes(StandardCharsets.UTF_8));
+
+        RepositoryDocument doc = new RepositoryDocument(
+                "doc-768",
+                "file://tmp/doc-768.txt",
+                bais,
+                Map.of(),
+                "acl-768",
+                Instant.now()
+        );
+
+        when(embeddingModel.embed(any(org.springframework.ai.document.Document.class)))
+                .thenReturn(new float[768]);
+
+        Result result = mock(Result.class);
+        when(feedClient.put(any(DocumentId.class), anyString(), any(OperationParameters.class)))
+                .thenReturn(CompletableFuture.completedFuture(result));
+
+        connector.send(doc).block();
+
+        ArgumentCaptor<DocumentId> idCaptor = ArgumentCaptor.forClass(DocumentId.class);
+        verify(feedClient, times(1)).put(idCaptor.capture(), anyString(), any(OperationParameters.class));
+
+        assertThat(idCaptor.getValue().documentType()).isEqualTo(VespaFields.DOCUMENT_TYPE_768);
+    }
+}
