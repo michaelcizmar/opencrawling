@@ -284,6 +284,42 @@ public class JobController {
                         org.opencrawling.qdrant.QdrantPointMapper mapper = new org.opencrawling.qdrant.QdrantPointMapper();
                         resolvedOutputConnector = new org.opencrawling.qdrant.QdrantOutputConnector(qdrantClient, props, mapper, null);
                         log.info("Successfully resolved dynamic Qdrant output connector for collection '{}'", collectionName);
+                    } else if (cls.contains("Vespa")) {
+                        String endpoint = outConfig.configuration().getOrDefault("vespaEndpoint", "http://localhost:8080");
+                        String namespace = outConfig.configuration().getOrDefault("vespaNamespace", "opencrawling");
+                        String documentType = outConfig.configuration().getOrDefault("vespaDocumentType", "opencrawling_chunk");
+                        int dimensions = 1024;
+                        try {
+                            dimensions = Integer.parseInt(outConfig.configuration().getOrDefault("vespaDimensions", "1024"));
+                        } catch (Exception ignored) {}
+                        int timeoutSeconds = 30;
+                        try {
+                            timeoutSeconds = Integer.parseInt(outConfig.configuration().getOrDefault("vespaTimeoutSeconds", "30"));
+                        } catch (Exception ignored) {}
+                        boolean tlsEnabled = Boolean.parseBoolean(outConfig.configuration().getOrDefault("vespaTlsEnabled", "false"));
+                        String tlsCertificate = outConfig.configuration().getOrDefault("vespaTlsCertificate", "");
+                        String tlsPrivateKey = outConfig.configuration().getOrDefault("vespaTlsPrivateKey", "");
+                        String tlsCaCertificates = outConfig.configuration().getOrDefault("vespaTlsCaCertificates", "");
+
+                        ai.vespa.feed.client.FeedClientBuilder feedClientBuilder = ai.vespa.feed.client.FeedClientBuilder.create(java.net.URI.create(endpoint));
+                        if (tlsEnabled && !tlsCertificate.isBlank() && !tlsPrivateKey.isBlank()) {
+                            feedClientBuilder.setCertificate(java.nio.file.Path.of(tlsCertificate), java.nio.file.Path.of(tlsPrivateKey));
+                            if (!tlsCaCertificates.isBlank()) {
+                                feedClientBuilder.setCaCertificatesFile(java.nio.file.Path.of(tlsCaCertificates));
+                            }
+                        }
+                        ai.vespa.feed.client.FeedClient feedClient = feedClientBuilder.build();
+
+                        org.opencrawling.vespa.config.VespaOutputProperties vespaProps = new org.opencrawling.vespa.config.VespaOutputProperties(
+                                endpoint, namespace, documentType, dimensions, timeoutSeconds, tlsEnabled,
+                                tlsCertificate.isBlank() ? null : tlsCertificate,
+                                tlsPrivateKey.isBlank() ? null : tlsPrivateKey,
+                                tlsCaCertificates.isBlank() ? null : tlsCaCertificates
+                        );
+
+                        org.opencrawling.vespa.VespaDocumentMapper vespaMapper = new org.opencrawling.vespa.VespaDocumentMapper();
+                        resolvedOutputConnector = new org.opencrawling.vespa.VespaOutputConnector(feedClient, vespaProps, vespaMapper, null);
+                        log.info("Successfully resolved dynamic Vespa output connector at endpoint '{}'", endpoint);
                     }
                 }
             } catch (Exception e) {
