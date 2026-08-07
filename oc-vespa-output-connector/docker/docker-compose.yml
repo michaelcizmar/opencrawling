@@ -30,6 +30,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+    networks:
+      - opencrawling-network
 
   # One-shot: deploys vespa-app/ (schema + services.xml) via the config server's deploy REST API,
   # then exits. The connector itself only feeds documents, it does not manage schema.
@@ -48,6 +50,13 @@ services:
         cd /vespa-app &&
         tar czf - . | curl -sf --header "Content-Type:application/x-gzip" --data-binary @-
         http://vespa:19071/application/v2/tenant/default/prepareandactivate
+    networks:
+      - opencrawling-network
 
+networks:
+  opencrawling-network:
+    name: opencrawling-network
+    driver: bridge
+        
 volumes:
   vespa_data:
