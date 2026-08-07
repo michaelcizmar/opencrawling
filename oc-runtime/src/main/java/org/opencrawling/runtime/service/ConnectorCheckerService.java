@@ -64,6 +64,11 @@ public class ConnectorCheckerService {
                 return checkPGVector(config);
             }
 
+            // --- Vespa Output Connector ---
+            if (className.contains("VespaOutputConnector") || className.contains("Vespa")) {
+                return checkVespa(config);
+            }
+
             // --- Camunda Repository Connector ---
             if (className.contains("CamundaRepositoryConnector") || className.contains("Camunda")) {
                 return checkCamunda(config);
@@ -232,6 +237,25 @@ public class ConnectorCheckerService {
             }
         } catch (Exception e) {
             return new ConnectionCheckResult(false, "Failed to connect to PostgreSQL database at " + url + ": " + e.getMessage(), e.toString());
+        }
+    }
+
+    private ConnectionCheckResult checkVespa(Map<String, String> config) {
+        String endpoint = config.getOrDefault("vespaEndpoint", "http://localhost:8080");
+        String cleanEndpoint = endpoint.endsWith("/") ? endpoint.substring(0, endpoint.length() - 1) : endpoint;
+        String healthUrl = cleanEndpoint + "/state/v1/health";
+
+        try {
+            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(healthUrl)).timeout(Duration.ofSeconds(5)).GET().build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200 && response.body().contains("\"up\"")) {
+                return new ConnectionCheckResult(true, "Successfully connected to Vespa at " + cleanEndpoint + " (status: up).", response.body());
+            } else {
+                return new ConnectionCheckResult(false, "Vespa health check at " + healthUrl + " returned HTTP " + response.statusCode() + " or a non-\"up\" status.", response.body());
+            }
+        } catch (Exception e) {
+            return new ConnectionCheckResult(false, "Failed to connect to Vespa at " + cleanEndpoint + ": " + e.getMessage(), e.toString());
         }
     }
 

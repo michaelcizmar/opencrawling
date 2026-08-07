@@ -52,3 +52,6 @@ user.dmp
 # Local runtime data
 oc-runtime/data/
 data/
+
+# Claude Code - local session/runtime state, never shared (CLAUDE.md itself stays tracked)
+**/.claude/

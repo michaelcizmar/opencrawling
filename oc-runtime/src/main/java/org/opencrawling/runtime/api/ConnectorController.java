@@ -83,6 +83,15 @@ public class ConnectorController {
             "opensearch3IndexName", "enterprise_kb",
             "opensearch3Dimensions", "1024"
         )));
+        defaults.add(new ConnectorDTO("Vespa_Output", "Vespa Hybrid Search Store", "output", "org.opencrawling.vespa.VespaOutputConnector", 10, Map.of(
+            "vespaEndpoint", "http://localhost:8080",
+            "vespaConfigEndpoint", "http://localhost:19071",
+            "vespaNamespace", "opencrawling",
+            "vespaDocumentType", "opencrawling_chunk",
+            "vespaDimensions", "1024",
+            "vespaTimeoutSeconds", "30",
+            "vespaTlsEnabled", "false"
+        )));
         defaults.add(new ConnectorDTO("Ollama_Embedding_Default", "Local Ollama Embeddings using mxbai-embed-large", "transformation", "org.opencrawling.embedding.OllamaEmbeddingConnector", 10, Map.of("baseUrl", "http://localhost:11434", "engine", "ollama", "model", "mxbai-embed-large")));
         defaults.add(new ConnectorDTO("OpenAI_Embedding_Prod", "Production OpenAI Embeddings", "transformation", "org.opencrawling.embedding.OpenAIEmbeddingConnector", 10, Map.of("engine", "openai", "model", "text-embedding-3-small", "apiKey", "sk-placeholder")));
         

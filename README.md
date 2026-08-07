@@ -19,6 +19,7 @@
 [![Milvus](https://img.shields.io/badge/Milvus-2.4.5-00A1EA.svg?style=flat&logo=milvus&logoColor=white)](https://milvus.io/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-1.12-DC244C.svg?style=flat&logo=qdrant&logoColor=white)](https://qdrant.tech/)
 [![OpenSearch](https://img.shields.io/badge/OpenSearch-2.x%20%7C%203.x-005EB8.svg?style=flat&logo=opensearch&logoColor=white)](https://opensearch.org/)
+[![Vespa](https://img.shields.io/badge/Vespa-8-4E9BFA.svg?style=flat&logo=vespa&logoColor=white)](https://vespa.ai/)
 [![Redis](https://img.shields.io/badge/Redis-Supported-red.svg?style=flat&logo=redis&logoColor=white)](https://redis.io/)
 [![Ollama](https://img.shields.io/badge/Ollama-0.23.4-white.svg?style=flat&logo=ollama&logoColor=black)](https://ollama.com/)
 [![OIS](https://img.shields.io/badge/OIS-Open_Ingestion_Standard-0052CC.svg?style=flat)](https://github.com/opencrawling/open-ingestion-standard)
@@ -395,6 +396,7 @@ docker compose -f docker/docker-compose.dist.yml -f docker/docker-compose.overri
 - **pgvector**: High-dimensional vector similarity search in PostgreSQL.
 - **Milvus**: High-performance, distributed vector database for large-scale enterprise vector indexing.
 - **Qdrant**: Rust-based vector search engine with payload-indexed ACL pre-filtering and optional scalar/binary quantization.
+- **Vespa**: Hybrid ANN vector search and BM25 lexical ranking engine, combining `nearestNeighbor` and full-text queries in a single rank profile for enterprise-scale RAG retrieval.
 - **Redis Stack**: Lightweight caching and session management.
 - **Ollama & OpenAI**: Dynamic embedding generation via local and cloud-based AI engines.
 - **Vite + React + TailwindCSS**: Modern frontend administration dashboard with interactive AIOps diagnostic panels.
@@ -596,6 +598,24 @@ This starts a standalone Qdrant instance alongside the decoupled OpenCrawling se
 
 ---
 
+### Option A.6: Decoupled Vespa-Based Deployment
+
+To run the complete decoupled pipeline configured to use Vespa instead of PostgreSQL/pgvector:
+
+1. **Build the Vespa decoupled stack**:
+   ```bash
+   docker compose -f oc-vespa-output-connector/docker/docker-compose-decoupled-with-vespa.yml build
+   ```
+
+2. **Start the Vespa decoupled pipeline**:
+   ```bash
+   docker compose -f oc-vespa-output-connector/docker/docker-compose-decoupled-with-vespa.yml up -d
+   ```
+
+This starts a standalone Vespa instance, deploys its schema application package (`oc-vespa-output-connector/vespa-app/`) via a one-shot container, and boots the decoupled OpenCrawling services alongside it. Key configuration properties (see `spring.opencrawling.output.vespa.*`): `endpoint`, `namespace`, `document-type` (fallback only, see below), `dimensions`, `timeout-seconds`, and `tls-enabled`/`tls-certificate`/`tls-private-key`/`tls-ca-certificates` (Vespa Cloud mTLS). Each chunk is routed dynamically to a dimension-specific document type (`opencrawling_chunk_384`/`768`/`1024`) based on its actual embedding length, so `all-minilm`, `nomic-embed-text`, and `mxbai-embed-large` can be fed side by side with no redeploy; `document-type`/`dimensions` are only used as the fallback for any other embedding size. Unlike pgvector/Milvus/Qdrant, the connector does not auto-provision the schema on startup; all four document types are deployed once via the Vespa config server's deploy REST API, and ACL pre-filtering is enforced through `security_allowed_read`/`security_denied_read` fields declared in that schema.
+
+---
+
 #### Running the Decoupled Integration Tests
 
 We provide fully automated end-to-end integration test scripts that build, boot, test, and cleanse the entire decoupled environment:
@@ -623,6 +643,12 @@ We provide fully automated end-to-end integration test scripts that build, boot,
     ./scripts/test-qdrant-decoupled.sh
     ```
     This script tests the decoupled architecture using Qdrant vector database, querying the Qdrant gRPC/REST API to verify point ingestion and checking Secure MCP Server endpoints.
+
+*   **Vespa Decoupled Pipeline**:
+    ```bash
+    ./scripts/test-vespa-decoupled.sh
+    ```
+    This script tests the decoupled architecture using Vespa, deploying the schema application package, querying the Vespa Document/Search API to verify chunk ingestion, asserting the `oc-runtime` Model Insights REST endpoints (health, document counts, BM25 query), and checking Secure MCP Server endpoints.
 
 *   **OpenTelemetry & Observability Pipeline**:
     ```bash

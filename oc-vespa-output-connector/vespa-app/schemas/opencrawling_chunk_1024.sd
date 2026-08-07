@@ -1,0 +1,100 @@
+# Copyright Vespa.ai. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+#
+# Dimension-specific twin of opencrawling_chunk.sd for the mxbai-embed-large embedding model (1024 dimensions).
+# VespaDocumentMapper.resolveDocumentType() routes chunks here automatically based on the actual
+# embedding length, so switching embedding models needs no redeploy.
+schema opencrawling_chunk_1024 {
+
+    document opencrawling_chunk_1024 {
+
+        field chunk_id type string {
+            indexing: summary | attribute
+        }
+
+        field uri type string {
+            indexing: summary | attribute
+            attribute: fast-search
+            rank: filter
+        }
+
+        field text type string {
+            indexing: summary | index
+            index: enable-bm25
+        }
+
+        field acl type string {
+            indexing: summary | attribute
+        }
+
+        field lastModified type string {
+            indexing: summary | attribute
+        }
+
+        field security_inheritance type bool {
+            indexing: summary | attribute
+        }
+
+        field security_allowed_read type array<string> {
+            indexing: summary | attribute
+            attribute: fast-search
+            rank: filter
+        }
+
+        field security_denied_read type array<string> {
+            indexing: summary | attribute
+            attribute: fast-search
+            rank: filter
+        }
+
+        # Arbitrary document metadata folded into one JSON blob rather than dynamic fields -
+        # see VespaDocumentMapper for why.
+        field metadata_json type string {
+            indexing: summary
+        }
+
+        field embedding type tensor<float>(x[1024]) {
+            indexing: attribute | index
+            attribute {
+                distance-metric: angular
+            }
+            index {
+                hnsw {
+                    max-links-per-node: 16
+                    neighbors-to-explore-at-insert: 200
+                }
+            }
+        }
+    }
+
+    fieldset default {
+        fields: text
+    }
+
+    rank-profile default {
+        first-phase {
+            expression: bm25(text)
+        }
+    }
+
+    rank-profile semantic inherits default {
+        inputs {
+            query(q_embedding_1024) tensor<float>(x[1024])
+        }
+        first-phase {
+            expression: closeness(field, embedding)
+        }
+    }
+
+    rank-profile hybrid inherits default {
+        inputs {
+            query(q_embedding_1024) tensor<float>(x[1024])
+        }
+        first-phase {
+            expression: bm25(text) + max(0.0, closeness(field, embedding))
+        }
+        match-features {
+            bm25(text)
+            closeness(field, embedding)
+        }
+    }
+}

@@ -32,10 +32,12 @@ import {
   Sun,
   Sparkles,
   Key,
-  Network
+  Network,
+  Layers
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { connectorApi } from '../lib/api'
+import VespaModelInsights from './VespaModelInsights'
 
 type ConnectorType = 'repository' | 'output' | 'authority' | 'transformation'
 
@@ -45,7 +47,7 @@ interface ConnectorFormData {
   type: ConnectorType
   className: string
   maxConnections: number
-  configuration: Record<string, string>
+  configuration: Record<string, string | boolean>
 }
 
 const getConnectorIconInfo = (className: string) => {
@@ -66,6 +68,9 @@ const getConnectorIconInfo = (className: string) => {
   }
   if (className.includes('Qdrant')) {
     return { icon: Network, color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-500/20' }
+  }
+  if (className.includes('Vespa')) {
+    return { icon: Layers, color: 'text-violet-400', bg: 'bg-violet-400/10', border: 'border-violet-500/20' }
   }
   if (className.includes('elasticsearch')) {
     return { icon: Search, color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-green-500/20' }
@@ -112,6 +117,11 @@ export default function ConnectorForm() {
 
   const selectedClass = watch('className')
   const watchMaxConnections = watch('maxConnections') || 10
+  const vespaTlsEnabled = watch('configuration.vespaTlsEnabled')
+  // Saved configuration values always come back as strings (the backend's configuration map is
+  // Map<String,String>), so a plain truthy check would treat the string "false" as checked/true.
+  const vespaTlsEnabledBool = vespaTlsEnabled === true || vespaTlsEnabled === 'true'
+  const vespaEndpointValue = watch('configuration.vespaEndpoint')
 
   const fetchConnectors = async () => {
     setIsLoading(true)
@@ -213,6 +223,7 @@ export default function ConnectorForm() {
       { label: 'Qdrant Vector Store', value: 'org.opencrawling.qdrant.QdrantOutputConnector' },
       { label: 'OpenSearch 2.x Output Connector', value: 'org.opencrawling.opensearch2.OpenSearch2OutputConnector' },
       { label: 'OpenSearch 3.x Output Connector', value: 'org.opencrawling.opensearch3.OpenSearch3OutputConnector' },
+      { label: 'Vespa Hybrid Search Store', value: 'org.opencrawling.vespa.VespaOutputConnector' },
     ],
     authority: [
       { label: 'Active Directory', value: 'org.opencrawling.authorities.authorities.activedirectory.ActiveDirectoryAuthority' },
@@ -1025,6 +1036,125 @@ export default function ConnectorForm() {
                           />
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Vespa Hybrid Search Store */}
+                  {selectedClass === 'org.opencrawling.vespa.VespaOutputConnector' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Endpoint</label>
+                          <input
+                            {...register('configuration.vespaEndpoint', { required: true })}
+                            placeholder="http://localhost:8080"
+                            defaultValue="http://localhost:8080"
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                          />
+                          <p className="text-xs text-muted-foreground">The Vespa container/search endpoint (Document &amp; Search API, port 8080 by default).</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Namespace</label>
+                          <input
+                            {...register('configuration.vespaNamespace')}
+                            placeholder="opencrawling"
+                            defaultValue="opencrawling"
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                          />
+                          <p className="text-xs text-muted-foreground">Document ID namespace used for every fed chunk.</p>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Default Document Type</label>
+                          <input
+                            {...register('configuration.vespaDocumentType')}
+                            placeholder="opencrawling_chunk"
+                            defaultValue="opencrawling_chunk"
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                          />
+                          <p className="text-xs text-muted-foreground">Fallback only - used when an embedding's dimension isn't 384, 768, or 1024 (see below).</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Fallback Dimensions</label>
+                          <input
+                            type="number"
+                            {...register('configuration.vespaDimensions', { valueAsNumber: true })}
+                            placeholder="1024"
+                            defaultValue={1024}
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Timeout (Seconds)</label>
+                          <input
+                            type="number"
+                            {...register('configuration.vespaTimeoutSeconds', { valueAsNumber: true })}
+                            placeholder="30"
+                            defaultValue={30}
+                            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-lg border border-violet-500/20 bg-violet-500/5 flex items-start gap-3">
+                        <Layers className="w-4 h-4 flex-shrink-0 text-violet-400 mt-0.5" />
+                        <p className="text-xs text-violet-200/80">
+                          <span className="font-semibold text-violet-300">Dynamic multi-dimension routing:</span> each chunk is routed automatically to a dedicated
+                          document type (384 / 768 / 1024) based on its actual embedding length, so <span className="font-mono">all-minilm</span>, <span className="font-mono">nomic-embed-text</span>, and <span className="font-mono">mxbai-embed-large</span> can
+                          all feed this store side by side - no config change or redeploy needed when switching embedding models.
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-border">
+                        <div className="flex items-center gap-2 pt-3">
+                          <input
+                            type="checkbox"
+                            id="vespaTlsEnabled"
+                            checked={vespaTlsEnabledBool}
+                            onChange={(e) => setValue('configuration.vespaTlsEnabled', e.target.checked, { shouldDirty: true })}
+                            className="rounded border-border text-primary focus:ring-primary/50"
+                          />
+                          <label htmlFor="vespaTlsEnabled" className="text-sm font-medium cursor-pointer">
+                            Enable mTLS (Vespa Cloud)
+                          </label>
+                        </div>
+
+                        {vespaTlsEnabledBool && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3 animate-in fade-in duration-200">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Client Certificate Path</label>
+                              <input
+                                {...register('configuration.vespaTlsCertificate')}
+                                placeholder="/path/to/cert.pem"
+                                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Private Key Path</label>
+                              <input
+                                {...register('configuration.vespaTlsPrivateKey')}
+                                placeholder="/path/to/key.pem"
+                                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">CA Certificates Path</label>
+                              <input
+                                {...register('configuration.vespaTlsCaCertificates')}
+                                placeholder="/path/to/ca.pem (optional)"
+                                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <VespaModelInsights endpoint={(vespaEndpointValue as string) || 'http://localhost:8080'} />
                     </div>
                   )}
 

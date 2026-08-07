@@ -71,6 +71,24 @@ export const observabilityApi = {
   getMetrics: (connectorId?: string) => api.get(`/observability/metrics${connectorId ? `?connectorId=${connectorId}` : ''}`),
 }
 
+export const vespaInsightsApi = {
+  getHealth: (endpoint: string) => api.get('/vespa/health', { params: { endpoint } }),
+  getDocumentCounts: (endpoint: string) => api.get('/vespa/document-counts', { params: { endpoint } }),
+  runQuery: (data: { endpoint: string; documentType: string; queryText: string; rankProfile: string }) =>
+    api.post('/vespa/query', data),
+  deployBundledSchema: (configEndpoint: string) => api.post('/vespa/deploy/bundled', { configEndpoint }),
+  deployCustomSchema: (configEndpoint: string, file: File) => {
+    const formData = new FormData()
+    formData.append('configEndpoint', configEndpoint)
+    formData.append('file', file)
+    // Clear the shared instance's default JSON header so the browser can set the correct
+    // multipart/form-data boundary itself.
+    return api.post('/vespa/deploy/custom', formData, {
+      headers: { 'Content-Type': undefined },
+    })
+  },
+}
+
 export const narrativizationApi = {
   generate: (data: { connectorType: string; fields: { name: string; type: string; description: string }[] }) =>
     api.post('/transformation/copilot/generate', data),
