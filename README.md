@@ -650,6 +650,12 @@ We provide fully automated end-to-end integration test scripts that build, boot,
     ```
     This script tests the decoupled architecture using Vespa, deploying the schema application package, querying the Vespa Document/Search API to verify chunk ingestion, asserting the `oc-runtime` Model Insights REST endpoints (health, document counts, BM25 query), and checking Secure MCP Server endpoints.
 
+*   **Standalone Vespa Connector Smoke Test**:
+    ```bash
+    ./scripts/test-vespa-connector.sh
+    ```
+    This script runs a fast standalone smoke test against a running or temporary Vespa container, deploying `vespa-app/`, feeding ACL-tagged document chunks at multiple vector dimensions, and verifying dynamic routing (`384`/`768`/`1024`) and search ACL filtering.
+
 *   **OpenTelemetry & Observability Pipeline**:
     ```bash
     ./scripts/test-observability.sh
