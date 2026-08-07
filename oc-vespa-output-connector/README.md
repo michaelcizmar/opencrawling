@@ -1,5 +1,10 @@
 # OpenCrawling - Vespa Output Connector
 
+[![Vespa](https://img.shields.io/badge/Vespa-8-4E9BFA.svg?style=flat&logo=vespa&logoColor=white)](https://vespa.ai/)
+[![Java Version](https://img.shields.io/badge/Java-25-orange.svg?style=flat&logo=openjdk&logoColor=white)](https://jdk.java.net/25/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1+-green.svg?style=flat&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat)](../../LICENSE)
+
 This module provides the `OutputConnector` implementation for **[Vespa](https://vespa.ai/)**, Yahoo's open-source big data serving engine combining ANN vector search with BM25 lexical ranking. Crawled document chunks and embeddings are fed into a Vespa document type with the same ACL pre-filtering model used by the pgvector, Milvus, and Qdrant connectors.
 
 ## Feature Overview

@@ -600,6 +600,8 @@ This starts a standalone Qdrant instance alongside the decoupled OpenCrawling se
 
 ### Option A.6: Decoupled Vespa-Based Deployment
 
+[![Vespa](https://img.shields.io/badge/Vespa-8-4E9BFA.svg?style=flat&logo=vespa&logoColor=white)](https://vespa.ai/)
+
 To run the complete decoupled pipeline configured to use Vespa instead of PostgreSQL/pgvector:
 
 1. **Build the Vespa decoupled stack**:
