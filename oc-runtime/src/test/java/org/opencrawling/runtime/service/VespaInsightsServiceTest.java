@@ -73,4 +73,32 @@ class VespaInsightsServiceTest {
         assertFalse(result.success());
         assertTrue(result.message().contains("Unsupported content type"));
     }
+
+    @Test
+    void testCheckHealthRejectsNonHttpScheme() {
+        VespaHealthResult result = insightsService.checkHealth("file:///etc/passwd");
+        assertFalse(result.up());
+        assertTrue(result.message().contains("must be an http or https URL"));
+    }
+
+    @Test
+    void testGetDocumentCountsRejectsNonHttpScheme() {
+        List<DocumentTypeCount> counts = insightsService.getDocumentCounts("gopher://internal-service:70/");
+        assertEquals(4, counts.size());
+        assertTrue(counts.stream().noneMatch(DocumentTypeCount::available));
+    }
+
+    @Test
+    void testRunQueryRejectsNonHttpScheme() {
+        VespaQueryResult result = insightsService.runQuery("file:///etc/passwd", "opencrawling_chunk", "hello", "default");
+        assertTrue(result.degraded());
+        assertTrue(result.message().contains("must be an http or https URL"));
+    }
+
+    @Test
+    void testDeployBundledSchemaRejectsNonHttpScheme() {
+        VespaDeployResult result = insightsService.deployBundledSchema("file:///etc/passwd");
+        assertFalse(result.success());
+        assertTrue(result.message().contains("must be an http or https URL"));
+    }
 }

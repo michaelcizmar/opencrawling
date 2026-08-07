@@ -64,6 +64,7 @@ public class VespaInsightsService {
     public VespaHealthResult checkHealth(String endpoint) {
         String cleanEndpoint = trimTrailingSlash(endpoint);
         try {
+            validateEndpoint(cleanEndpoint);
             HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
             HttpRequest request = HttpRequest.newBuilder(URI.create(cleanEndpoint + "/state/v1/health"))
                     .timeout(Duration.ofSeconds(5)).GET().build();
@@ -201,6 +202,7 @@ public class VespaInsightsService {
     }
 
     private JsonNode postSearch(String endpoint, ObjectNode body) throws Exception {
+        validateEndpoint(endpoint);
         HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
         HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint + "/search/"))
                 .timeout(Duration.ofSeconds(10))
@@ -264,6 +266,7 @@ public class VespaInsightsService {
     private VespaDeployResult postDeploy(String configEndpoint, byte[] packageBytes, String contentType) {
         String cleanEndpoint = trimTrailingSlash(configEndpoint);
         try {
+            validateEndpoint(cleanEndpoint);
             HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
             HttpRequest request = HttpRequest.newBuilder(URI.create(cleanEndpoint + "/application/v2/tenant/default/prepareandactivate"))
                     .timeout(Duration.ofSeconds(60))
@@ -283,6 +286,29 @@ public class VespaInsightsService {
 
     private static String trimTrailingSlash(String url) {
         return (url != null && url.endsWith("/")) ? url.substring(0, url.length() - 1) : url;
+    }
+
+    /**
+     * This panel's whole purpose is reaching an operator-configured Vespa instance, which in real
+     * deployments is almost always on a private network - so unlike a typical SSRF fix, blocking
+     * private/internal addresses would break the feature outright and isn't attempted here. What's
+     * always safe to reject regardless of network topology is a non-HTTP(S) scheme, which blocks the
+     * classic protocol-smuggling SSRF vectors (file://, gopher://, etc.).
+     */
+    private static void validateEndpoint(String endpoint) {
+        URI uri;
+        try {
+            uri = URI.create(endpoint);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Malformed endpoint URL: " + endpoint);
+        }
+        String scheme = uri.getScheme();
+        if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+            throw new IllegalArgumentException("Endpoint must be an http or https URL, got: " + endpoint);
+        }
+        if (uri.getHost() == null || uri.getHost().isBlank()) {
+            throw new IllegalArgumentException("Endpoint is missing a host: " + endpoint);
+        }
     }
 
     public record VespaHealthResult(boolean up, String message) {}
